@@ -39,6 +39,22 @@ hd = 24.  # 24 horas
 XCO2 = 44.0095  # g mol-1
 XCO2_mg = 44009.5  # mg mol-1
 
+############################## NAME OF VARIABLES ############################################################
+#Ux, Uy and Uz are wind components,  IDL: x,y,z
+# SonicTemperature, IDL: ts
+# SonicDiagnosticFlag, IDL: diag_s
+# CO2Density, IDL: co2
+# H2ODensity, IDL: h20
+# GasDiagnosticFlag, IDL: diag_i???
+# AirTemperature, IDL: at
+# AirPressure, IDL: ap
+# CO2SignalStrengthNominally, IDL: co2ss
+# H2OSignalStrengthNominally, IDL: h2oss
+# PressureDifferential, IDL: press_diff !!!!!!!!!!!!!! NOT USED DURING PROCESSING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# SourceHousingTemperature, IDL: sht
+# DetectorHousingTemperature, IDL: dht
+# CounterArbitrary, IDL: counter_arb
+# SignatureArbitrary, IDL: sah???
 
 # ################ Working directory ########################################################################
 
