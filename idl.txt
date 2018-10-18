@@ -1,0 +1,74 @@
+
+
+
+
+
+
+
+
+
+
+
+
+#################################################################################################################
+############################# FUNCTIONS #########################################################################
+
+def DESPIKES (data, num_stdev,nmh, name_out):
+
+	co2_final=data
+	nn_co2=num_stdev
+	media_co2=MEAN(data,/NAN)
+	stats_co2=moment(data,sdev=sigma_co2)
+	med_mov=TS_SMOOTH(data,6000,/DOUBLE)
+
+    ### poe os 0's a NAN
+	if n_elements(where(co2_final eq 0.)) GT 1 THEN co2_final[where(co2_final EQ 0.)]=!VALUES.D_NAN
+
+	ns_co2=0
+
+	spikes_co2=co2_final gt med_mov+nn_co2*sigma_co2 or co2_final lt med_mov-nn_co2*sigma_co2
+
+	### fazer o caso de haver spike na posicao 0 e na posicao 35999
+	IF spikes_co2(0) EQ 1  then co2_final(0)=!VALUES.D_NAN
+	IF spikes_co2(n_elements(spikes_co2)-1) EQ 1 then co2_final(n_elements(spikes_co2)-1)=!VALUES.D_NAN
+
+	### tratar os spikes CO2, H2O, X, Y
+	### para o caso de varios spikes seguidos são tratados em várias vezes graças ao while
+	while n_elements(where(spikes_co2)) GT 1 do begin
+
+		### array com localização dos spikes (vai sendo renovado a cada while)
+		id_sp=where(spikes_co2)
+
+			FOR kk=0, n_elements(where(spikes_co2))-1 do begin
+
+				if id_sp(kk) gt 0 and id_sp(kk) lt n_elements(co2_final)-1 then begin
+					### se for absurdo por NAN
+					if co2_final(id_sp(kk)) GT 1.03*media_co2 or co2_final(id_sp(kk)) LT .97*media_co2 then $
+					co2_final(id_sp(kk))=!VALUES.D_NAN $
+
+					### substitui o spike pela media dos vizinhos
+					else co2_final(id_sp(kk))=(co2_final(id_sp(kk)-1)+co2_final(id_sp(kk)+1))/2.
+				endif
+			endfor
+			ns_co2++
+
+		### faz novamente as contas da media, sigma e media movel
+
+		spikes_co2=co2_final gt med_mov+nn_co2*sigma_co2 or co2_final lt med_mov-nn_co2*sigma_co2
+		id_sp2=where(spikes_co2)
+		if n_elements(id_sp2) ge n_elements(id_sp) then spikes_co2=-1
+	endwhile
+
+	IF n_elements(where(spikes_co2)) EQ 1 THEN begin
+
+			id_sp=where(spikes_co2)
+
+			### para o caso de 1 spike
+			IF id_sp NE -1 THEN begin
+				co2_final(id_sp)=(co2_final(id_sp-1)+co2_final(id_sp+1))/2.
+			ENDIF
+			ns_co2++
+
+	ENDIF
+
+return co2_final
