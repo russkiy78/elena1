@@ -72,3 +72,27 @@ def DESPIKES (data, num_stdev,nmh, name_out):
 	ENDIF
 
 return co2_final
+
+############### the part of the main code of Miguel's IDL programm ##########################################
+##### Despiking of the data is done according EddyPro link (https://www.licor.com/env/help/eddypro/topics_eddypro/Despiking_Raw_Stat_Screening.html?Highlight=spikes)
+
+############# Calling of the despiking function ###############################################################
+	nn_varios=3.5
+	name_out='x'
+	x_final_sp=DESPIKES(x_final,nn_varios,i,name_out)
+	name_out='y'
+	y_final_sp=DESPIKES(y_final,nn_varios,i,name_out)
+	name_out='ts'
+	ts_final_sp=DESPIKES(ts_final,nn_varios,i,name_out)
+	name_out='tc'
+	tc_final_sp=DESPIKES(tc_final,nn_varios,i,name_out)
+	name_out='co2'
+	co2_final_sp=DESPIKES(co2_final,nn_varios,i,name_out)
+	name_out='h2o'
+	h2o_final_sp=DESPIKES(h2o_final,nn_varios,i,name_out)
+	nn_z=5.0
+	name_out='z'
+	z_final_sp=DESPIKES(z_final,nn_z,i,name_out)
+
+
+
