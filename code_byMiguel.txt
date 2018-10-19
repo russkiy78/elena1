@@ -1,0 +1,560 @@
+##################################### the part with reading block #############################
+##################################### was skipped here ########################################
+
+cc=48. ;** 48 meias horas
+
+var_todas_x=dblarr(cc)
+var_todas_y=dblarr(cc)
+var_todas_z=dblarr(cc)
+
+cov_todas_xy=dblarr(cc)
+cov_todas_xz=dblarr(cc)
+cov_todas_yz=dblarr(cc)
+cov_todas_tsx=dblarr(cc)
+cov_todas_tsy=dblarr(cc)
+cov_todas_tsz=dblarr(cc)
+cov_todas_tcx=dblarr(cc)
+cov_todas_tcy=dblarr(cc)
+cov_todas_tcz=dblarr(cc)
+cov_todas_co2x=dblarr(cc)
+cov_todas_co2y=dblarr(cc)
+cov_todas_co2z=dblarr(cc)
+cov_todas_co2fastx=dblarr(cc)
+cov_todas_co2fasty=dblarr(cc)
+cov_todas_co2fastz=dblarr(cc)
+cov_todas_h2ox=dblarr(cc)
+cov_todas_h2oy=dblarr(cc)
+cov_todas_h2oz=dblarr(cc)
+
+covr_todas_xz=dblarr(cc)
+covr_todas_yz=dblarr(cc)
+covr_todas_tsz=dblarr(cc)
+covr_todas_tcz=dblarr(cc)
+covr_todas_co2z=dblarr(cc)
+covr_todas_co2fastz=dblarr(cc)
+covr_todas_h2oz=dblarr(cc)
+
+
+auxr=dblarr(cc)
+u_starr=dblarr(cc)
+taur=dblarr(cc)
+Hsr=dblarr(cc)
+Hcr=dblarr(cc)
+LE_irgar=dblarr(cc)
+H2O_wpl_LEr=dblarr(cc)
+H2O_wpl_Hr=dblarr(cc)
+LE_wplr=dblarr(cc)
+Evap_MP=dblarr(cc)
+Fc_irgar=dblarr(cc)
+Fc_irgar_fast=dblarr(cc)
+CO2_wpl_LEr=dblarr(cc)
+CO2_wpl_Hr=dblarr(cc)
+CO2_wpl_LEr_fast=dblarr(cc)
+CO2_wpl_Hr_fast=dblarr(cc)
+Fc_wplr=dblarr(cc)
+Fc_wplr_umol=dblarr(cc)
+Fc_wplr_fast=dblarr(cc)
+media_co2ss=dblarr(cc)
+
+obukhov=dblarr(cc)
+zeta_wen=dblarr(cc)
+XR90=dblarr(cc)
+Xmax=dblarr(cc)
+rou=dblarr(cc)
+co2_ppm=dblarr(cc)
+
+MU_WPL=28.97/18.02
+R=8.3143e-3	 ;** kPa m3 K-1 mol-1
+RD=R/28.97	 ;** kPa m3 K-1 g-1
+RV=R/18.02	 ;** kPa m3 K-1 g-1
+sonic_azi=137.
+SIG_STRG=0.7
+von_karman=.4
+Zm=2.0        	;** m
+gravity=9.80665	;** m s-2
+Lk=2.  ;com o valor b == 3.7 (pag 516 klunj) L'~2.0 (figure A1)
+Ac=4.28
+Ad=1.68
+Bk=3.42
+alpha1=-0.8
+hd=24. ;** 24 horas
+XCO2=44.0095 ;** g mol-1
+XCO2_mg=44009.5 ;** mg mol-1
+
+;** constroi o inicio e fim para as 48h meias horas diarias
+h_ini=intarr(cc)
+m_ini=intarr(cc)
+s_ini=intarr(cc)
+ms_ini=intarr(cc)
+h_fim=intarr(cc)
+m_fim=intarr(cc)
+s_fim=intarr(cc)
+ms_fim=intarr(cc)
+
+;`** constroi o tempo de inicio e fim das 48 meias horas
+j=0
+for i=0, hd-1 do begin
+
+ 	h_ini(j)=i & h_ini(j+1)=i
+	m_ini(j)=0 & m_ini(j+1)=30
+	s_ini(j)=0 & s_ini(j+1)=0
+	ms_ini(j)=5 & ms_ini(j+1)=5
+
+	h_fim(j)=i & h_fim(j+1)=i
+	m_fim(j)=29 & m_fim(j+1)=59
+	s_fim(j)=59 & s_fim(j+1)=59
+	ms_fim(j)=95 & ms_fim(j+1)=95
+	;if i eq 23 then h_fim(j+1)=23
+	j++
+	j++
+
+endfor
+
+FOR i=0L, nlinhas-1 DO BEGIN
+
+	line=strsplit(todos(i),/extract)
+	;** varios arrays com a data
+	ano(i)=strmid(line(0),0,2)
+	mes(i)=strmid(line(0),2,2)
+	dia(i)=strmid(line(0),4,2)
+	hora(i)=strmid(line(0),6,2)
+	minutos(i)=strmid(line(0),8,2)
+	segundos(i)=strmid(line(0),10,2)
+
+	line2=strsplit(line(2),',',/extract)
+
+	;** vai corrigir os NAN para -7999 para serem lidos como float
+	;caso contrario sao lidos com string e convertidos em 0.0
+	FOR j=0, colunas-1 DO IF strcmp(line2(j),'NAN') EQ 1 THEN $
+	line2[WHERE(strcmp(line2,'NAN'))]=-7999.00
+
+
+	x(i)=double(line2(0))	  ;** m s-1
+	y(i)=double(line2(1))	  ;** m s-1
+	z(i)=double(line2(2))	  ;** m s-1
+	ts(i)=double(line2(3))    ;** ºC
+	diag_s(i)=double(line2(4))
+	co2(i)=double(line2(5))	  ;** mg m-3
+	h2o(i)=double(line2(6))    ;** g m-3double(
+	diag_i(i)=double(line2(7))
+	at(i)=double(line2(8))	  ;** ºC
+	ap(i)=double(line2(9))    ;** kPa
+	co2ss(i)=double(line2(10))
+	h2oss(i)=double(line2(11))
+	press_diff(i)=double(line2(12)) 		 ;** kPa
+	sht(i)=double(line2(13))	  			;** source housing temp
+	dht(i)=double(line2(14))	  			;** detector housing temp
+	counter_arb(i)=double(line2(15))	 	 ;** counter arbitrary
+	sah(i)=line2(16)	  			;** signature arbitrary in hexadecimal
+
+	;** vai corrigir os valores de -7999.0 para NAN
+	IF (x(i) EQ -7999.0) THEN x(i)=!VALUES.D_NAN
+	IF (y(i) EQ -7999.0) THEN y(i)=!VALUES.D_NAN
+	IF (z(i) EQ -7999.0) THEN z(i)=!VALUES.D_NAN
+	IF (ts(i) EQ -7999.0) THEN ts(i)=!VALUES.D_NAN
+	IF (diag_s(i) EQ -7999) THEN diag_s(i)=!VALUES.D_NAN
+	IF (co2(i) EQ -7999.0) THEN co2(i)=!VALUES.D_NAN
+	IF (h2o(i) EQ -7999.0) THEN h2o(i)=!VALUES.D_NAN
+	IF (diag_i(i) EQ -7999) THEN diag_i(i)=!VALUES.D_NAN
+	IF (at(i) EQ -7999.0) THEN at(i)=!VALUES.D_NAN
+	IF (ap(i) EQ -7999.0) THEN ap(i)=!VALUES.D_NAN
+	IF (co2ss(i) EQ -7999.0) THEN co2ss(i)=!VALUES.D_NAN
+	IF (h2oss(i) EQ -7999.0) THEN h2oss(i)=!VALUES.D_NAN
+
+
+	;** faz controlo de absurdos
+	IF (co2(i) LT 0. or co2(i) GT 5e3) THEN co2(i)=!VALUES.D_NAN
+	IF (h2o(i) LT 0. or h2o(i) GT 5e3) THEN h2o(i)=!VALUES.D_NAN
+
+	;** filtra aqui logo os signal strength
+	IF (co2ss(i) LT .7) THEN co2(i)=!VALUES.D_NAN
+	IF (h2oss(i) LT .7) THEN h2o(i)=!VALUES.D_NAN
+
+	ts_absolute(i)=ts(i)+273.15
+	tc(i)=ts_absolute(i)/(1.+0.32*h2o(i)*R*ts_absolute(i)/(ap(i)*18.02))
+
+endfor
+
+;** numero de pontos por periodos de 30 minutos ###################Humidity correction of sonic temperature is applied.
+np=dblarr(cc)
+perct_flags=dblarr(cc)
+h=0.
+elementos=18000.
+
+for i=0, cc-1 do begin
+
+	;** vai procurar no dia todo qual o periodo correspodente às meias horas (em ciclo)
+	periodo=where(hora ge h_ini(i) and hora le h_fim(i) and minutos ge m_ini(i) and minutos le m_fim(i))
+	;** numero de pontos por meia hora
+	np(i)=double(n_elements(periodo))
+
+	;** transforma as as horas e minutos para o print final
+	res=evenodd(i)
+	if res eq 0 then m_fim(i)=30
+	if res eq 1 then begin
+		h_fim(i)++
+		m_fim(i)=0
+	endif
+
+	;** faz as contas quando ha metade dos numeros de pontos nas meias horasc   #####Number of available points should be higher or equal to 18000 (15 minutes at 20 Hz). 
+	IF np(i) GE elementos/2. then begin
+
+	;** definir o array que entra para as contas
+	x_final=x(periodo)
+	y_final=y(periodo)
+	z_final=z(periodo)
+	ts_final=ts_absolute(periodo)
+	tc_final=tc(periodo)
+	co2_final=co2(periodo)
+	h2o_final=h2o(periodo)
+
+
+;***** FAZER AQUI OS FLAGS
+
+############## Data with diag_irga and diag_sonic (irga and sonic diagnostic) not equal to 0 are flagged with NaN due to problems with these data
+	flagi=WHERE(diag_i(periodo) NE 0.)
+	flags=WHERE(diag_s(periodo) NE 0.)
+###Data with CO2_sig_strgth and H2O_sig_strgth (CO2  and H2O signal strength) lower than 0.7 are flagged with NaN due to poor quality of these data.
+	flagc=WHERE(co2ss(periodo) LT SIG_STRG)
+	flagh=WHERE(h2oss(periodo) LT SIG_STRG)
+
+	;** junta as 4 flags
+	flag_aux=[flagi,flags,flagc,flagh]
+
+	;** poe por ordem ascendente
+	flag2=flag_aux[SORT(flag_aux)]
+
+	;* poe -1 quando ha repeticao
+	FOR st=0L, n_elements(flag2)-1 DO IF st GE 3 THEN if (flag2(st) EQ flag2(st-1) or $
+	flag2(st) EQ flag2(st-2) or flag2(st) EQ flag2(st-3)) THEN flag2(st)=-1.
+
+	;**	 retira os NAN (os repetidos)
+	if n_elements(where(flag2 ge 0)) eq 1 then flag_final=0. else flag_final=flag2(WHERE(flag2 ge 0.))
+
+	;** se tiver os zeros repetidos no inicio **
+    IF n_elements(flag_final) GT 1. then while (flag_final(0) EQ 0. and flag_final(1) eq 0.) do  $
+    flag_final=flag_final(1:*)
+
+	;** calcula a percentagem de flags nas meias horas
+	perct_flags(i)=n_elements(flag_final)/np(i)*100.
+	;if perct_flags(i) ge 101. then stop
+
+
+	;** faz o controlo inicial
+	printf,66,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),n_elements(periodo),n_elements(flag_final),$
+	n_elements(x_final),format='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",3(I6,","))'
+
+
+  	;** vai filtrar os arrays finais com as flags acima
+	IF (n_elements(flag_final) GT 1.) THEN BEGIN
+		x_final(flag_final)=!VALUES.D_NAN
+		y_final(flag_final)=!VALUES.D_NAN
+		z_final(flag_final)=!VALUES.D_NAN
+		ts_final(flag_final)=!VALUES.D_NAN
+		tc_final(flag_final)=!VALUES.D_NAN
+		co2_final(flag_final)=!VALUES.D_NAN
+		h2o_final(flag_final)=!VALUES.D_NAN
+
+######## If the sum of data flagged in number 2. e 3. is lower than half of the number of available points it is OK for calculations 
+#(in this condition, and in extreme case of 15 minutes of data approved in 1., the flux calculation can be done with only 7.5 minutes of data. 
+######## Do you agree with this? If no, please let me know other threshold).
+		IF (n_elements(flag_final) LT np(i)/2.) THEN BEGIN
+
+			if n_elements(WHERE(FINITE(x_final))) eq 1. then x_final=!VALUES.D_NAN else $
+			x_final=x_final[WHERE(FINITE(x_final))]
+			if n_elements(WHERE(FINITE(y_final))) eq 1. then y_final=!VALUES.D_NAN else $
+			y_final=y_final[WHERE(FINITE(y_final))]
+			if n_elements(WHERE(FINITE(z_final))) eq 1. then z_final=!VALUES.D_NAN else $
+			z_final=z_final[WHERE(FINITE(z_final))]
+			if n_elements(WHERE(FINITE(ts_final))) eq 1. then ts_final=!VALUES.D_NAN else $
+			ts_final=ts_final[WHERE(FINITE(ts_final))]
+			if n_elements(WHERE(FINITE(tc_final))) eq 1. then tc_final=!VALUES.D_NAN else $
+			tc_final=tc_final[WHERE(FINITE(tc_final))]
+			if n_elements(WHERE(FINITE(co2_final))) eq 1. then co2_final=!VALUES.D_NAN else $
+			co2_final=co2_final[WHERE(FINITE(co2_final))]
+			if n_elements(WHERE(FINITE(h2o_final))) eq 1. then h2o_final=!VALUES.D_NAN else $
+			h2o_final=h2o_final[WHERE(FINITE(h2o_final))]
+			;** iguala o np ao numero elements de x_final para as var, cov e linfit
+			np(i)=n_elements(x_final)
+			printf,33,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),n_elements(periodo),n_elements(flag_final),$
+			n_elements(x_final),format='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",3(I6,","))'
+
+
+		;com menos de metade dos valores flagados nao faz contas
+		ENDIF ELSE BEGIN
+
+			x_final=lindgen(elementos)
+			x_final(*)=!VALUES.D_NAN
+			y_final=lindgen(elementos)
+			y_final(*)=!VALUES.D_NAN
+			z_final=lindgen(elementos)
+			z_final(*)=!VALUES.D_NAN
+			ts_final=lindgen(elementos)
+			ts_final(*)=!VALUES.D_NAN
+			tc_final=lindgen(elementos)
+			tc_final(*)=!VALUES.D_NAN
+			co2_final=lindgen(elementos)
+			co2_final(*)=!VALUES.D_NAN
+			h2o_final=lindgen(elementos)
+			h2o_final(*)=!VALUES.D_NAN
+
+			;** iguala o np ao numero elements de x_final para as var, cov e linfit
+			np(i)=n_elements(x_final)
+			printf,34,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),n_elements(periodo),n_elements(flag_final),$
+			n_elements(x_final),format='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",3(I6,","))'
+
+
+		ENDELSE
+
+	ENDIF
+
+##### Despiking of the data is done according EddyPro link (https://www.licor.com/env/help/eddypro/topics_eddypro/Despiking_Raw_Stat_Screening.html?Highlight=spikes)
+	nn_varios=3.5
+	name_out='x'
+	x_final_sp=DESPIKES(x_final,nn_varios,i,name_out)
+	name_out='y'
+	y_final_sp=DESPIKES(y_final,nn_varios,i,name_out)
+	name_out='ts'
+	ts_final_sp=DESPIKES(ts_final,nn_varios,i,name_out)
+	name_out='tc'
+	tc_final_sp=DESPIKES(tc_final,nn_varios,i,name_out)
+	name_out='co2'
+	co2_final_sp=DESPIKES(co2_final,nn_varios,i,name_out)
+	name_out='h2o'
+	h2o_final_sp=DESPIKES(h2o_final,nn_varios,i,name_out)
+	nn_z=5.0
+	name_out='z'
+	z_final_sp=DESPIKES(z_final,nn_z,i,name_out)
+;
+;
+;	;** medias com despikes
+	media_x=MEAN(x_final_sp,/NAN)
+	media_y=MEAN(y_final_sp,/NAN)
+	media_z=MEAN(z_final_sp,/NAN)
+	media_ts=MEAN(ts_final_sp,/NAN)  ; Kelvins
+	media_tc=MEAN(tc_final_sp,/NAN)  ; Kelvins
+	media_co2=MEAN(co2_final_sp,/NAN)
+	media_h2o=MEAN(h2o_final_sp,/NAN)
+
+
+;*** medias sem despikes
+	media_at=MEAN(at(periodo),/NAN)
+	media_ap=MEAN(ap(periodo),/NAN)
+	media_co2ss(h)=MEAN(co2ss(periodo),/NAN)
+	media_h2oss=MEAN(h2oss(periodo),/NAN)
+
+
+	stdev_z=STDDEV(z_final,/NAN)
+
+	;** faz o controlo final
+	printf,66,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),n_elements(periodo),n_elements(flag_final),$
+	n_elements(x_final),format='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",3(I6,","))'
+
+
+    var_todas_x(h)=(1./np(i))*TOTAL((x_final-media_x)^2.,/NAN)
+	var_todas_y(h)=(1./np(i))*TOTAL((y_final-media_y)^2.,/NAN)
+	var_todas_z(h)=(1./np(i))*TOTAL((z_final-media_z)^2.,/NAN)
+
+	cov_todas_xy(h)=(1./np(i))*TOTAL((x_final-media_x)*(y_final-media_y),/NAN)
+	cov_todas_xz(h)=(1./np(i))*TOTAL((x_final-media_x)*(z_final-media_z),/NAN)
+	cov_todas_yz(h)=(1./np(i))*TOTAL((y_final-media_y)*(z_final-media_z),/NAN)
+	cov_todas_tsx(h)=(1./np(i))*TOTAL((ts_final-media_ts)*(x_final-media_x),/NAN)
+	cov_todas_tsy(h)=(1./np(i))*TOTAL((ts_final-media_ts)*(y_final-media_y),/NAN)
+	cov_todas_tsz(h)=(1./np(i))*TOTAL((ts_final-media_ts)*(z_final-media_z),/NAN)
+	cov_todas_tcx(h)=(1./np(i))*TOTAL((tc_final-media_tc)*(x_final-media_x),/NAN)
+	cov_todas_tcy(h)=(1./np(i))*TOTAL((tc_final-media_tc)*(y_final-media_y),/NAN)
+ 	cov_todas_tcz(h)=(1./np(i))*TOTAL((tc_final-media_tc)*(z_final-media_z),/NAN)
+	cov_todas_co2x(h)=(1./np(i))*TOTAL((co2_final-media_co2)*(x_final-media_x),/NAN)
+	cov_todas_co2y(h)=(1./np(i))*TOTAL((co2_final-media_co2)*(y_final-media_y),/NAN)
+ 	cov_todas_co2z(h)=(1./np(i))*TOTAL((co2_final-media_co2)*(z_final-media_z),/NAN)
+	cov_todas_h2ox(h)=(1./np(i))*TOTAL((h2o_final-media_h2o)*(x_final-media_x),/NAN)
+	cov_todas_h2oy(h)=(1./np(i))*TOTAL((h2o_final-media_h2o)*(y_final-media_y),/NAN)
+ 	cov_todas_h2oz(h)=(1./np(i))*TOTAL((h2o_final-media_h2o)*(z_final-media_z),/NAN)
+
+
+	rho_d_mean=(media_ap/((media_tc)*RD))-(media_h2o*MU_WPL) ;** g m-3
+    rho_a_mean=(rho_d_mean+media_h2o)/1000.		;** Kg m-3
+    sigma_wpl=media_h2o/rho_d_mean
+    LV=2501.-(2.37*(media_tc-273.15)) ; J g-1
+    CP=1004.67*(1+.84*(0.622*media_h2o*RV*(media_tc/media_ap)))  ; J Kg-1 K-1
+
+	wind_speed=sqrt(media_x^2.+media_y^2.)
+	IF wind_speed EQ 0. THEN wind_speed=!VALUES.D_NAN
+
+	r2d=180./!pi
+
+	wind_dir=atan(-media_y,media_x)*r2d
+
+	;** wind dir compass
+	wind_dir_compass=(wind_dir+sonic_azi) MOD 360
+	if wind_dir_compass	lt 0. then wind_dir_compass=wind_dir_compass+360.
+
+	;** aqui so com LINFIT
+	x_final_lnf=dblarr(np(i)) ;* para fazer o linfit
+	y_final_lnf=dblarr(np(i))
+	z_final_lnf=dblarr(np(i))
+	ts_final_lnf=dblarr(np(i))
+	tc_final_lnf=dblarr(np(i))
+	co2_final_lnf=dblarr(np(i))
+	h2o_final_lnf=dblarr(np(i))
+
+####Linear detrending is applied.
+    fit_x=LINFIT(lindgen(n_elements(x_final)),x_final,YFIT=xrecta)
+	x_final_lnf=lindgen(n_elements(x_final))*fit_x(1)+fit_x(0)
+
+	fit_y=LINFIT(lindgen(n_elements(y_final)),y_final,YFIT=yrecta)
+	y_final_lnf=lindgen(n_elements(y_final))*fit_y(1)+fit_y(0)
+
+	fit_z=LINFIT(lindgen(n_elements(z_final)),z_final,YFIT=zrecta)
+	z_final_lnf=lindgen(n_elements(z_final))*fit_z(1)+fit_z(0)
+
+	fit_ts=LINFIT(lindgen(n_elements(ts_final)),ts_final,YFIT=tsrecta)
+	ts_final_lnf=lindgen(n_elements(ts_final))*fit_ts(1)+fit_ts(0)
+
+	fit_tc=LINFIT(lindgen(n_elements(tc_final)),tc_final,YFIT=tsrecta)
+	tc_final_lnf=lindgen(n_elements(tc_final))*fit_tc(1)+fit_tc(0)
+
+	fit_co2=LINFIT(lindgen(n_elements(co2_final)),co2_final,YFIT=co2recta)
+	co2_final_lnf=lindgen(n_elements(co2_final))*fit_co2(1)+fit_co2(0)
+
+	fit_h2o=LINFIT(lindgen(n_elements(h2o_final)),h2o_final,YFIT=h2orecta)
+	h2o_final_lnf=lindgen(n_elements(h2o_final))*fit_h2o(1)+fit_h2o(0)
+
+
+	;** var lnf
+	var_todas_x(h)=(1./np(i))*TOTAL((x_final-x_final_lnf)^2.,/NAN)
+	var_todas_y(h)=(1./np(i))*TOTAL((y_final-y_final_lnf)^2.,/NAN)
+	var_todas_z(h)=(1./np(i))*TOTAL((z_final-z_final_lnf)^2.,/NAN)
+
+	;** cov lnf
+	cov_todas_xy(h)=(1./np(i))*TOTAL((x_final-x_final_lnf)*(y_final-y_final_lnf),/NAN)
+	cov_todas_xz(h)=(1./np(i))*TOTAL((x_final-x_final_lnf)*(z_final-z_final_lnf),/NAN)
+	cov_todas_yz(h)=(1./np(i))*TOTAL((y_final-y_final_lnf)*(z_final-z_final_lnf),/NAN)
+	cov_todas_tsx(h)=(1./np(i))*TOTAL((ts_final-ts_final_lnf)*(x_final-x_final_lnf),/NAN)
+	cov_todas_tsy(h)=(1./np(i))*TOTAL((ts_final-ts_final_lnf)*(y_final-y_final_lnf),/NAN)
+	cov_todas_tsz(h)=(1./np(i))*TOTAL((ts_final-ts_final_lnf)*(z_final-z_final_lnf),/NAN)
+	cov_todas_tcx(h)=(1./np(i))*TOTAL((tc_final-tc_final_lnf)*(x_final-x_final_lnf),/NAN)
+	cov_todas_tcy(h)=(1./np(i))*TOTAL((tc_final-tc_final_lnf)*(y_final-y_final_lnf),/NAN)
+ 	cov_todas_tcz(h)=(1./np(i))*TOTAL((tc_final-tc_final_lnf)*(z_final-z_final_lnf),/NAN)
+	cov_todas_co2x(h)=(1./np(i))*TOTAL((co2_final-co2_final_lnf)*(x_final-x_final_lnf),/NAN)
+	cov_todas_co2y(h)=(1./np(i))*TOTAL((co2_final-co2_final_lnf)*(y_final-y_final_lnf),/NAN)
+ 	cov_todas_co2z(h)=(1./np(i))*TOTAL((co2_final-co2_final_lnf)*(z_final-z_final_lnf),/NAN)
+	cov_todas_h2ox(h)=(1./np(i))*TOTAL((h2o_final-h2o_final_lnf)*(x_final-x_final_lnf),/NAN)
+	cov_todas_h2oy(h)=(1./np(i))*TOTAL((h2o_final-h2o_final_lnf)*(y_final-y_final_lnf),/NAN)
+ 	cov_todas_h2oz(h)=(1./np(i))*TOTAL((h2o_final-h2o_final_lnf)*(z_final-z_final_lnf),/NAN)
+
+
+###Double axis rotation of the wind speed components is applied.
+	teta=atan(media_y/media_x)								;// EQUAÇÃO 5,  ANGULO TETA
+	fi=atan(media_z/(sqrt(media_x^2.+media_y^2.)))			;// EQUAÇÃO 6,  ANGULO FI
+
+	cos2_teta=cos(teta)*cos(teta)
+	cos2_fi=cos(fi)*cos(fi)									;//COS E SIN AO QUADRADO
+	sin2_teta=sin(teta)*sin(teta)
+	sin2_fi=sin(fi)*sin(fi)
+;
+	;** EQUACAO 13 **
+	covr_todas_xz(h)=cov_todas_xz(h)*cos(teta)*(cos2_fi-sin2_fi)+cov_todas_yz(h)*sin(teta)*(cos2_fi-sin2_fi)$
+	-2*cov_todas_xy(h)*sin(teta)*cos(teta)*sin(fi)*cos(fi)-var_todas_x(h)*cos2_teta*sin(fi)*cos(fi)$
+	-var_todas_y(h)*sin2_teta*sin(fi)*cos(fi)+var_todas_z(h)*sin(fi)*cos(fi)
+	;** EQUACAO 15 **
+	covr_todas_yz(h)=cov_todas_yz(h)*cos(teta)*cos(fi)-cov_todas_xz(h)*sin(teta)*cos(fi)$
+	-cov_todas_xy(h)*sin(fi)*(cos2_teta-sin2_teta)+(var_todas_x(h)-var_todas_y(h))*sin(teta)*cos(teta)*sin(fi)
+	;** EQUACAO 16 **
+	covr_todas_tsz(h)=cov_todas_tsz(h)*cos(fi)-cov_todas_tsx(h)*cos(teta)*sin(fi)-cov_todas_tsy(h)*sin(teta)*sin(fi)
+	covr_todas_tcz(h)=cov_todas_tcz(h)*cos(fi)-cov_todas_tcx(h)*cos(teta)*sin(fi)-cov_todas_tcy(h)*sin(teta)*sin(fi)
+	covr_todas_h2oz(h)=cov_todas_h2oz(h)*cos(fi)-cov_todas_h2ox(h)*cos(teta)*sin(fi)-cov_todas_h2oy(h)*sin(teta)*sin(fi)
+	covr_todas_co2z(h)=cov_todas_co2z(h)*cos(fi)-cov_todas_co2x(h)*cos(teta)*sin(fi)-cov_todas_co2y(h)*sin(teta)*sin(fi)
+
+	;*** FLUXOS COM ROT ( LINFIT)  ******
+	auxr(h)=sqrt((covr_todas_xz(h)^2.)+(covr_todas_yz(h)^2.))	;* Momento
+	u_starr(h)=sqrt(auxr(h))							 		 ;* Vel Friccao
+	taur(h)=-rho_a_mean*auxr(h)			      	  				 ;* Momento final
+	Hsr(h)=rho_a_mean*CP*covr_todas_tsz(h)  				 ;* Sensivel com temp sonica
+    Hcr(h)=rho_a_mean*CP*covr_todas_tcz(h)  					 ;* Sensivel com temp corrigida para o vapor de agua
+	LE_irgar(h)=LV*covr_todas_h2oz(h)							 ;* latente irga
+	H2O_wpl_LEr(h)=MU_WPL*sigma_wpl*LE_irgar(h)   ################## CO2 and H2O density fluctuations are corrected with WPL terms (569-571, 574-576
+    H2O_wpl_Hr(h)=(1.+(MU_WPL*sigma_wpl))*media_h2o*LV*covr_todas_tcz(h)/media_tc
+    LE_wplr(h)=LE_irgar(h)+H2O_wpl_LEr(h)+H2O_wpl_Hr(h)		;* latente WPL
+	Evap_MP(h)=covr_todas_h2oz(h)*1800./1000. ; L m-2 ** 1800 (30 min em segundos), 1000. g -> kg
+	Fc_irgar(h)=covr_todas_co2z(h)					  			;* CO2 irga
+	CO2_wpl_LEr(h)=MU_WPL*media_co2/rho_d_mean*covr_todas_h2oz(h)
+   	CO2_wpl_Hr(h)=(1.+(MU_WPL*sigma_wpl))*media_co2*covr_todas_tcz(h)/media_tc
+    Fc_wplr(h)=Fc_irgar(h)+CO2_wpl_LEr(h)+CO2_wpl_Hr(h)			;* CO2 WPL mg m-2 s-1
+	Fc_wplr_umol(h)=Fc_wplr(h)/(XCO2/1e3)	;* CO2 WPL umol m-2 s-1 ;** se quiser em umol ->/(XCO2/1e3)
+
+	;** por os zeros a NAN
+	IF u_starr(h) EQ 0. THEN u_starr(h)=!VALUES.D_NAN
+	IF taur(h) EQ 0. THEN taur(h)=!VALUES.D_NAN
+	IF Hcr(h) EQ 0. THEN Hcr(h)=!VALUES.D_NAN
+	IF LE_wplr(h) EQ 0. THEN LE_wplr(h)=!VALUES.D_NAN
+	IF Evap_MP(h) EQ 0. THEN Evap_MP(h)=!VALUES.D_NAN
+	IF Fc_wplr(h) EQ 0. THEN Fc_wplr(h)=!VALUES.D_NAN
+	IF Fc_wplr_umol(h) EQ 0. THEN Fc_wplr_umol(h)=!VALUES.D_NAN
+	IF media_co2 EQ 0. THEN media_co2=!VALUES.D_NAN
+	IF media_h2o EQ 0. THEN media_h2o=!VALUES.D_NAN
+
+
+	;** footprint e stability analysis
+	obukhov(h)=(-(media_ts)*u_starr(h)^3.)/(gravity*von_karman*covr_todas_tsz(h)) ;** m
+
+	zeta_wen(h)=Zm/obukhov(h)	;* Instability Wen - arbitrary
+
+	if u_starr(h) LE .10856 then 	rou(h)=1.89e-6/u_starr(h) ;** Zilinketcevic ;** meters
+
+	if u_starr(h) GT .10856 then  rou(h)=1.477e-3*u_starr(h)^2 ;** Zilinketcevic ;** meters
+
+	viscosity=0.000014  ;** m2 s-1
+	reynolds=u_starr(h)^3/(gravity*viscosity) ;** arbitrary
+
+	Xmax(h)=(Ac-Ad)*(Bk-alog(rou(h)))*Zm*(stdev_z/u_starr(h))^alpha1 ;** Kljun - meters
+
+	XR90(h)=Lk*(Ac-Ad)*(Bk-alog(rou(h)))*Zm*(stdev_z/u_starr(h))^alpha1 ;** Kljun
+
+	;** passar o CO2 para PPM
+	;**  1000 para passar para g m-3
+	co2_ppm(h)=(R*media_ts*media_co2*1000.)/(XCO2*media_ap)
+
+	;** sigma w / ustar
+	sigmaw_ustar=stdev_z/auxr(h)
+
+	;** media w sem rotacao / U (vento médio)
+	w_velvento=media_z/wind_speed
+
+	;** fim das equaçoes - inicio da escrita
+	;** print LINFIT + ROT
+	printf,89,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),np(i),u_starr(h),$
+	taur(h),Hcr(h),LE_wplr(h),Evap_MP(h),Fc_wplr(h),Fc_wplr_umol(h),media_co2,co2_ppm(h),$
+	media_co2ss(h),media_h2o,media_h2oss,media_at,media_ap,wind_speed,wind_dir_compass,$
+	obukhov(h),zeta_wen(h),rou(h),sigmaw_ustar,Xmax(h),XR90(h),$
+	FORMAT='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",1(F7.1,","),22(F16.6,","))'
+
+	h++
+
+	;** if np(i) GE elementos/2. (metade dos valores nas meias horas)
+	ENDIF ELSE BEGIN
+
+	;** print LINFIT + ROT
+	printf,89,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),np(i),$
+	FORMAT='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",2(F7.1,","),22("NAN",","))'
+
+	ENDELSE
+
+ENDFOR ;** i = 0  ate cc (48)
+
+
+ENDFOR ;** ficheiros
+
+close,32
+close,33
+close,34
+close,35
+close,66
+close,89
+
+
+print,' '
+print,' PROGRAM ENDED SUCCESSFULLY, PLEASE CHECK RESULTS!'
+print,' '
+
+END
