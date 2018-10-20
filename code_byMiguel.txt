@@ -383,11 +383,9 @@ for i=0, cc-1 do begin
 
 	r2d=180./!pi
 
-	wind_dir=atan(-media_y,media_x)*r2d
-
-	;** wind dir compass
-	wind_dir_compass=(wind_dir+sonic_azi) MOD 360
-	if wind_dir_compass	lt 0. then wind_dir_compass=wind_dir_compass+360.
+	wind_dir=atan(media_y,media_x)*r2d
+	wind_dir=(wind_dir+sonic_azi) MOD 360
+	if wind_dir lt 0. then wind_dir=wind_dir+360.
 
 	;** aqui so com LINFIT
 	x_final_lnf=dblarr(np(i)) ;* para fazer o linfit
@@ -525,7 +523,7 @@ for i=0, cc-1 do begin
 	;** print LINFIT + ROT
 	printf,89,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),np(i),u_starr(h),$
 	taur(h),Hcr(h),LE_wplr(h),Evap_MP(h),Fc_wplr(h),Fc_wplr_umol(h),media_co2,co2_ppm(h),$
-	media_co2ss(h),media_h2o,media_h2oss,media_at,media_ap,wind_speed,wind_dir_compass,$
+	media_co2ss(h),media_h2o,media_h2oss,media_at,media_ap,wind_speed,wind_dir,$
 	obukhov(h),zeta_wen(h),rou(h),sigmaw_ustar,Xmax(h),XR90(h),$
 	FORMAT='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",1(F7.1,","),22(F16.6,","))'
 
