@@ -1,31 +1,42 @@
 ##################################### the part with reading block #############################
 ##################################### was skipped here ########################################
 
-cc=48. ;** 48 meias horas
+cc=48. #### the number of 30 min blocks within one day
 
+################################################ VARIABLE DECLARATION ###############################
+#### dblarr(...) declaration of the double array... to calculate the variance of wind components
 var_todas_x=dblarr(cc)
 var_todas_y=dblarr(cc)
 var_todas_z=dblarr(cc)
 
+##### dblarr(...) declaration of the double array... to calculate the covariance of all components in the list of variables (see main,py list of variables)
 cov_todas_xy=dblarr(cc)
 cov_todas_xz=dblarr(cc)
 cov_todas_yz=dblarr(cc)
 cov_todas_tsx=dblarr(cc)
 cov_todas_tsy=dblarr(cc)
 cov_todas_tsz=dblarr(cc)
+
+#####humidity correction of sonic temperature
 cov_todas_tcx=dblarr(cc)
+
 cov_todas_tcy=dblarr(cc)
 cov_todas_tcz=dblarr(cc)
+
 cov_todas_co2x=dblarr(cc)
 cov_todas_co2y=dblarr(cc)
 cov_todas_co2z=dblarr(cc)
+
+## this three covariance related to spectrescopic correction, the instrument specific coefficients can be provided by Campbell for OS less than EC100.08.01
 cov_todas_co2fastx=dblarr(cc)
 cov_todas_co2fasty=dblarr(cc)
 cov_todas_co2fastz=dblarr(cc)
+
 cov_todas_h2ox=dblarr(cc)
 cov_todas_h2oy=dblarr(cc)
 cov_todas_h2oz=dblarr(cc)
 
+### the covariance related to double axis rotation
 covr_todas_xz=dblarr(cc)
 covr_todas_yz=dblarr(cc)
 covr_todas_tsz=dblarr(cc)
@@ -34,35 +45,37 @@ covr_todas_co2z=dblarr(cc)
 covr_todas_co2fastz=dblarr(cc)
 covr_todas_h2oz=dblarr(cc)
 
+############# the units of output variables are given lines 33-35 in the code by Miguel 
+auxr=dblarr(cc)         ### internal variable
+u_starr=dblarr(cc)      ### u star
+taur=dblarr(cc)         ### momentum flux, 
+Hsr=dblarr(cc)          ### Sensible heat flux,
+Hcr=dblarr(cc)          ### SenHeat Flux humidity corrected,
+LE_irgar=dblarr(cc)     ### Laten heat flux, by Irgason
+H2O_wpl_LEr=dblarr(cc)  ### internal variable
+H2O_wpl_Hr=dblarr(cc)   ### internal variable
+LE_wplr=dblarr(cc)      ### Lat heat flux with WPL correction (Webb et al., )      !!!!!!!!!!!!!!!!!!
+Evap_MP=dblarr(cc)      ### Evaporation by Potes M. 				   !!!!!!!!!!!!!!!
+Fc_irgar=dblarr(cc)     ### Carbon flux by Irgason
+Fc_irgar_fast=dblarr(cc) ### Carbon flux with spectorscopic correction
+CO2_wpl_LEr=dblarr(cc)  ### internal variable
+CO2_wpl_Hr=dblarr(cc)   ### internal variable
+CO2_wpl_LEr_fast=dblarr(cc)  ### internal variable
+CO2_wpl_Hr_fast=dblarr(cc)   ### internal variable
+Fc_wplr=dblarr(cc)        ### Carbon flux with WPL correction,  mg/(m^2 s)
+Fc_wplr_umol=dblarr(cc)   ### Carbon Flux..., umol/(m^2 s)
+Fc_wplr_fast=dblarr(cc)   ### Carbon flux with WPL and spectroscopic correction
+media_co2ss=dblarr(cc)    ### CO2 signal strenght
 
-auxr=dblarr(cc)
-u_starr=dblarr(cc)
-taur=dblarr(cc)
-Hsr=dblarr(cc)
-Hcr=dblarr(cc)
-LE_irgar=dblarr(cc)
-H2O_wpl_LEr=dblarr(cc)
-H2O_wpl_Hr=dblarr(cc)
-LE_wplr=dblarr(cc)
-Evap_MP=dblarr(cc)
-Fc_irgar=dblarr(cc)
-Fc_irgar_fast=dblarr(cc)
-CO2_wpl_LEr=dblarr(cc)
-CO2_wpl_Hr=dblarr(cc)
-CO2_wpl_LEr_fast=dblarr(cc)
-CO2_wpl_Hr_fast=dblarr(cc)
-Fc_wplr=dblarr(cc)
-Fc_wplr_umol=dblarr(cc)
-Fc_wplr_fast=dblarr(cc)
-media_co2ss=dblarr(cc)
 
-obukhov=dblarr(cc)
-zeta_wen=dblarr(cc)
-XR90=dblarr(cc)
-Xmax=dblarr(cc)
-rou=dblarr(cc)
-co2_ppm=dblarr(cc)
+obukhov=dblarr(cc)       ### obuhov leght
+zeta_wen=dblarr(cc)      ### stability parameter 
+XR90=dblarr(cc)          ### 90% of footprint, meter
+Xmax=dblarr(cc)          ### maximum of footprint, meter!
+rou=dblarr(cc)           ### roughtness
+co2_ppm=dblarr(cc)       ### co2 density in ppm
 
+############### CONSTANTS DECLARATION ################################
 MU_WPL=28.97/18.02
 R=8.3143e-3	 ;** kPa m3 K-1 mol-1
 RD=R/28.97	 ;** kPa m3 K-1 g-1
@@ -81,11 +94,14 @@ hd=24. ;** 24 horas
 XCO2=44.0095 ;** g mol-1
 XCO2_mg=44009.5 ;** mg mol-1
 
+##################### build the time stamps to be used to extract raw date within 30 min time interval #############
+####################################################################################################################
 ;** constroi o inicio e fim para as 48h meias horas diarias
-h_ini=intarr(cc)
+h_ini=intarr(cc)    ### _ini means begging of the interval
 m_ini=intarr(cc)
 s_ini=intarr(cc)
 ms_ini=intarr(cc)
+### _fim means end of the interval
 h_fim=intarr(cc)
 m_fim=intarr(cc)
 s_fim=intarr(cc)
@@ -109,6 +125,11 @@ for i=0, hd-1 do begin
 	j++
 
 endfor
+
+##################################################################################################################
+
+#################################### READING the WHOLE DATA SET FOR ONE DAY INTO MATRIX/ARRAY ####################
+##################################################################################################################
 
 FOR i=0L, nlinhas-1 DO BEGIN
 
@@ -171,16 +192,22 @@ FOR i=0L, nlinhas-1 DO BEGIN
 	IF (h2oss(i) LT .7) THEN h2o(i)=!VALUES.D_NAN
 
 	ts_absolute(i)=ts(i)+273.15
+	###################Humidity correction of sonic temperature is applied ###################  !!!!! reference!!!
 	tc(i)=ts_absolute(i)/(1.+0.32*h2o(i)*R*ts_absolute(i)/(ap(i)*18.02))
 
 endfor
+####################################################################################################################
 
-;** numero de pontos por periodos de 30 minutos ###################Humidity correction of sonic temperature is applied.
-np=dblarr(cc)
-perct_flags=dblarr(cc)
-h=0.
-elementos=18000.
+################################# Declaration of variables ########################################################
+;** numero de pontos por periodos de 30 minutos 
+np=dblarr(cc)                    ########## output variable
+perct_flags=dblarr(cc)           ########## internal var, not used, persentage of "bad" flag in data
+h=0.                             ### counter
+elementos=18000.                 ### number of points in 30 min interval for 10 Hz
 
+
+
+################################# MAIN CODE ########################################################################
 for i=0, cc-1 do begin
 
 	;** vai procurar no dia todo qual o periodo correspodente às meias horas (em ciclo)
@@ -327,7 +354,7 @@ for i=0, cc-1 do begin
 	z_final_sp=DESPIKES(z_final,nn_z,i,name_out)
 ;
 ;
-;	;** medias com despikes
+;	;** s com despikes
 	media_x=MEAN(x_final_sp,/NAN)
 	media_y=MEAN(y_final_sp,/NAN)
 	media_z=MEAN(z_final_sp,/NAN)
