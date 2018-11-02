@@ -1,0 +1,293 @@
+###################;PRO IRGASON_FLUX
+
+COMMON list,list
+;device, decomposed=1 ;*** 0 é para a janela, 1 é para o ficheiro ***
+
+loadct, 39
+#################### paths and opening #############################################
+fpath='C:\TRABALHO\ANTARTICA\resultados_Elena_2018\'
+fpath_graficos='C:\TRABALHO\ANTARTICA\resultados_Elena_2018\GRAFICOS_WDIR_FINAL_MP\'
+fpath_files='C:\TRABALHO\ANTARTICA\resultados_Elena_2018\FILES_WDIR_FINAL_MP\'
+
+periodo='20180101_20180207_'
+
+openw,65,fpath_files+periodo+'ANTARTICA_2018_resumo_flags.dat'
+openw,66,fpath_files+periodo+'ANTARTICA_2018_resumo_fluxos.dat'
+openw,67,fpath_files+periodo+'ANTARTICA_2018_resumo_fluxos_ciclo_diario.dat'
+openw,68,fpath_files+periodo+'ANTARTICA_2018_resumo_fluxos_min_max.dat'
+
+;***** FICHEIRO PLATAFORMA ********
+
+file_plt=findfile(fpath+'20180101_20180207*.txt')
+
+
+;** numero de linhas
+linhas_plt = file_lines(file_plt)
+
+;** numero de COLUNAS
+openr,U,file_plt,/get_lun
+line=" "
+readf, U, line ;** cabecalho
+readf, U, line ;** cabecalho
+;readf, U, line ;** cabecalho
+readf, U, line ;** matriz
+colunas_plt=n_elements(strsplit(line,',',/regex,/extract))
+
+############## ;** rewind the data file to its start
+point_lun,U,0
+
+nlinhas_plt=linhas_plt(0)-2  ;***** 1 linhas de cabecalho
+lixo=strarr(1)
+grandezas=strarr(1)
+unidades=strarr(1)
+todos_plt=strarr(nlinhas_plt)
+########## reading headers and data to matrix #################################################
+readf,U,grandezas ;** cabecalho=header
+readf,U,unidades ;** cabecalho
+readf,U,todos_plt  ;** matriz
+
+header=strsplit(grandezas,',',/extract) ############# reading the names of variables 
+units=strsplit(unidades,',',/extract)   ########### ... units
+
+
+######################### ARRAYS DECLARATION ###################################################
+ano_plt=intarr(nlinhas_plt)
+mes_plt=intarr(nlinhas_plt)
+dia_plt=intarr(nlinhas_plt)
+hora_plt_ini=intarr(nlinhas_plt)
+minutos_plt_ini=intarr(nlinhas_plt)
+hora_plt_fim=intarr(nlinhas_plt)
+minutos_plt_fim=intarr(nlinhas_plt)
+mat_plt=fltarr(colunas_plt-1,nlinhas_plt)
+
+####################### convert string to float variables ######################################
+FOR i=0L, nlinhas_plt-1 DO BEGIN
+
+	line=strsplit(todos_plt(i),',',/extract)
+	;** varios arrays com a data
+	data=strsplit(line(0),'/ - : ',/extract)
+	ano_plt(i)=data(0)
+	mes_plt(i)=data(1)
+	dia_plt(i)=data(2)
+	hora_plt_ini(i)=data(3)
+	minutos_plt_ini(i)=data(4)
+	hora_plt_fim(i)=data(5)
+	minutos_plt_fim(i)=data(6)
+
+        ############# to read NAN to float ######################################
+	;** vai corrigir os -NAN para -7999 para serem lidos com float
+	FOR j=0, colunas_plt-1 DO IF strcmp(strtrim(line(j),1),'-NaN') EQ 1 THEN $
+	line[WHERE(strcmp(strtrim(line,1),'-NaN'))]=-7999.00
+
+	;** vai corrigir os NAN para -7999 para serem lidos com float
+	FOR j=0, colunas_plt-1 DO IF strcmp(strtrim(line(j),1),'NaN') EQ 1 THEN $
+	line[WHERE(strcmp(strtrim(line,1),'NaN'))]=-7999.00
+
+       ##### final matrix ######################################################3
+	;** matriz com os dados
+	mat_plt(*,i)=line(1:*)
+	
+ENDFOR
+#####################################################################################################
+FREE_LUN,U
+
+
+######## return values to NAN ;*** por os -7999 a NAN
+mat_plt[WHERE(mat_plt EQ -7999.)]=!VALUES.F_NAN
+
+############# to name the columns instead to number ################################################
+######## ;** lista de header - ajuda para filtrar
+npoints=0 & ustar=1 & tau=2 & sens=3 & latent=4 & evap=5 & carb_flux=6 & carb_umol=7
+carb_conc=8 & carb_ppm=9 & carb_ss=10 & vapor=11 & vapor_ss=12 & temp=13 & press=14
+wspeed=15 & wdir=16 & obu=17 & zeta=18 & roughness=19 & sigmaw=20 & xmax=21 & xr90=22
+
+############ the filtration of wind due to wind cone ############################################### 
+############;** filtro da direcao do vento **
+############ water selection #######################################################################
+selecao_agua=WHERE(mat_plt(wdir,*) GE 105. and mat_plt(wdir,*) LE 240.)
+printf,65,'wind dir lake > 105 and < 240 [%]: ',float(n_elements(selecao_agua))/float(n_elements(mat_plt(wdir,*)))*100.
+########### land selection ########################################################################
+selecao_terra=WHERE(mat_plt(wdir,*) LT 105. or mat_plt(wdir,*) GT 240.)
+printf,65,'wind dir land < 105 or > 240 [%]: ',float(n_elements(selecao_terra))/float(n_elements(mat_plt(wdir,*)))*100.
+mat_plt(*,selecao_terra)=!VALUES.F_NAN
+
+############### to print files and estimate the percentage of land/water selection #################
+printf,65,'wind direction from lake [%]: float(n_elements(selecao_agua))/float(nlinhas_plt)*100.
+printf,65,'wind direction from land [%]: float(n_elements(selecao_terra))/float(nlinhas_plt)*100.
+
+################;******** THOMPSON OUTLIERS ********** filtration ##################################
+###### declaration of arrays and variable with size connected to data ##############################
+medias_fluxos=fltarr(colunas2)
+desvios_fluxos=fltarr(colunas2)
+tau_s=fltarr(colunas2)
+delta=fltarr(colunas2,nlinhas)
+outl=fltarr(colunas2)
+outl_perctg=fltarr(colunas2)
+todos_perctg=fltarr(colunas2)
+tau_thompson=fltarr(colunas2)
+ss_outl=intarr(colunas2)
+
+################################ the constant was calculated in separate file and set as a constant ########
+# however, the calculations should be included to the main code #########
+## appled to whole dataset processed ######################
+##;* tau thompson para 5808 valores (nlinhas) calculado num excel
+##;este tau vai variar com o numero de pontos (ss) mas para os fluxos todos é igual até a 4ª casa decimal
+tau_thompson=1.9597
+
+######## mean and STDV #####################################################################################
+FOR i=0, colunas_plt-1 DO medias_fluxos(i)=MEAN(mat_plt(i,*),/NAN)
+
+FOR i=0, colunas_plt-1 DO BEGIN
+	x=MOMENT(mat_plt(i,*),/NAN,SDEV=stdev)
+	desvios_fluxos(i)=stdev
+ENDFOR
+
+############### to multiply tau to STDV ######################################################################
+FOR i=0, colunas_plt-1 DO tau_s(i)=tau_thompson*desvios_fluxos(i)
+
+############### delta is absolute values of difference between ##############################################
+FOR i=0, colunas_plt-1 DO delta(i,*)=abs(mat2(i,*)-medias_fluxos(i))
+
+
+################ to define the outliers #####################################################################
+FOR i=0, colunas_plt-1 DO BEGIN
+	sl_outlier=WHERE(delta(i,*) GT tau_s(i))
+	;** numero de outliers por fluxo
+	outl(i)=n_elements(sl_outlier)
+	;** poe a NAN os erros
+	IF n_elements(sl_outlier) GT 1. AND sl_outlier(0) NE -1. THEN mat_plt(i,sl_outlier)=!VALUES.F_NAN
+ENDFOR
+###########################################################################################################
+
+#################### to define percentage of outliers defined and print ####################################
+FOR i=0, colunas_plt-1 DO outl_perctg(i)=outl(i)/float(n_elements(mat_plt(0,*)))*100.
+
+printf,65,'NAN com filtros fetch[180º]+outliers[Thompson]'
+for j=0, colunas_plt-1 DO printf,45,n_elements(where(finite(mat_plt(j,*),/NAN)))
+printf,65,' '
+printf,65,' '
+
+;****************
+
+printf,65,'NAN total e dias: ',n_elements(where(finite(mat_plt(15,*),/NAN))),n_elements(where(finite(mat_plt(15,*),/NAN)))/48.
+printf,65,'FINITE total dias: ',n_elements(where(finite(mat_plt(15,*)))),n_elements(where(finite(mat_plt(15,*))))/48.
+printf,65,'Nº TOTAL PONTOS e dias: ',n_elements(mat_plt(15,*)),n_elements(mat_plt(15,*))/48.
+printf,65,'Percentagem de NAN : ',n_elements(where(finite(mat_plt(15,*),/NAN)))*100./n_elements(mat_plt(15,*))
+#######################################33
+
+
+
+########################## the filtarations to produce the final plots #########################################
+################ to filter according to the distance in the selected cone ######################################
+;** filtro do footprint **
+;printf,65,'Footprint > 300m: ',n_elements(where(mat_plt(23,*) gt 300))
+;mat_plt(*,where(mat_plt(23,*) gt 300))=!VALUES.F_NAN
+
+######################### to final plotting, to skip all data which seem to be strange/stupit ##################
+;*** filtrar o tau para valores estupidos a NAN
+;mat_plt(3,where(mat_plt(tau,*) gt 100.))=!VALUES.F_NAN
+
+;*** filtrar o Fc wlpr fast para valores estupidos a NAN
+;mat_plt(8,where(mat_plt(carb_flux,*) lt -.5 or mat_plt(carb_flux,*) gt .5))=!VALUES.F_NAN
+
+;*** filtrar o LE para valores estupidos a NAN
+;mat_plt(5,where(mat_plt(latent,*) lt -100.))=!VALUES.F_NAN
+
+;*** filtrar o Hc  para valores estupidos a NAN
+;mat_plt(4,where(mat_plt(sens,*) lt -140. or mat_plt(sens,*) gt 150.))=!VALUES.F_NAN
+
+;*** filtrar o Zeta Wen  para valores estupidos a NAN
+;mat_plt(20,where(mat_plt(zeta,*) lt -10. or mat_plt(zeta,*) gt 10.))=!VALUES.F_NAN
+
+;*** filtrar o Rou para valores estupidos a NAN
+;mat_plt(21,where(mat_plt(roughness,*) gt 1.))=!VALUES.F_NAN
+###################################################################################################################
+
+
+############### Printing statistics ################################################################################
+printf,66,'Hc Average [W m-2] ',MEAN(mat_plt(sens,*),/NAN)
+printf,66,'LE Average [W m-2] ',MEAN(mat_plt(lat,*),/NAN)
+printf,66,'Fc Average [mg m-2 s-1] ',MEAN(mat_plt(carb_flux,*),/NAN)
+printf,66,'Fc Average [umol m-2 s-1] ',MEAN(mat_plt(carb_umol,*),/NAN)
+printf,66,' '
+
+printf,66,'Fc mean 	mg m-2 s-1	: ',MEAN(mat_plt(7,*),/NAN)
+printf,66,'Fc mean [0,12h] mg m-2 s-1: ',MEAN(mat_plt(7,where(hora_plt_ini ge 0. and hora_plt_ini lt 12.)),/NAN)
+printf,66,'Fc mean [12,24h] mg m-2 s-1: ',MEAN(mat_plt(7,where(hora_plt_ini ge 12. and hora_plt_ini le 24.)),/NAN)
+printf,66,' '
+
+printf,66,'Fc mean fast	mg m-2 s-1	: ',MEAN(mat_plt(8,*),/NAN)
+printf,66,'Fc mean fast [0,12h] mg m-2 s-1: ',MEAN(mat_plt(8,where(hora_plt_ini ge 0. and hora_plt_ini lt 12.)),/NAN)
+printf,66,'Fc mean fast [12,24h] mg m-2 s-1: ',MEAN(mat_plt(8,where(hora_plt_ini ge 12. and hora_plt_ini le 24.)),/NAN)
+printf,66,' '
+
+printf,66,'TAU min and max [Kg m-1 s-2] ',min(mat_plt(tau,*),/NAN),max(mat_plt(tau,*),/NAN)
+printf,66,'Hc min and max [W m-2] ',min(mat_plt(sens,*),/NAN),max(mat_plt(sens,*),/NAN)
+printf,66,'LE min and max [W m-2] ',min(mat_plt(lat,*),/NAN),max(mat_plt(lat,*),/NAN)
+printf,66,'Fc min and max [mg m-2 s-1] ',min(mat_plt(carb_flux,*),/NAN),max(mat_plt(carb_flux,*),/NAN)
+printf,66,'Fc min and max [mg m-2 s-1] ',min(mat_plt(carb_umol,*),/NAN),max(mat_plt(carb_umol,*),/NAN)
+printf,66,'co2 min and max [mg m-3] ',min(mat_plt(carb_conc,*),/NAN),max(mat_plt(carb_conc,*),/NAN)
+printf,66,'co2 min and max [PPM] ',min(mat_plt(carb_ppm,*),/NAN),max(mat_plt(carb_ppm,*),/NAN)
+printf,66,'h2o min and max [g m-3] ',min(mat_plt(vapor,*),/NAN),max(mat_plt(vapor,*),/NAN)
+printf,66,'Temp min and max[ºC] ',min(mat_plt(temp,*),/NAN),max(mat_plt(temp,*),/NAN)
+printf,66,'Press min and max[kPa] ',min(mat_plt(press,*),/NAN),max(mat_plt(press,*),/NAN)
+printf,66,'Wind speed min and max [m s-1] ',min(mat_plt(wspeed,*),/NAN),max(mat_plt(wspeed,*),/NAN)
+printf,66,'z/L min and max [-]   ',min(mat_plt(zeta,*),/NAN),max(mat_plt(zeta,*),/NAN)
+printf,66,'Rou min and max [m]',min(mat_plt(roughness,*),/NAN),max(mat_plt(roughness,*),/NAN)
+printf,66,'Xmax min and max [-]   ',min(mat_plt(xmax,*),/NAN),max(mat_plt(xmax,*),/NAN)
+printf,66,'X90 min and max [-]   ',min(mat_plt(xr90,*),/NAN),max(mat_plt(xr90,*),/NAN)
+
+close,65
+close,66
+
+
+##################################################################################################
+####### some numbers to overview of work done ####################################################
+openw,U,fpath_files+periodo+'ANTARTICA_2018_resumo_resub.dat'
+printf,U,'numero total e numero total com filtro da direccao do vento (270 a 90) e signal strength'
+printf,U,n_elements(mat_plt(19,*)),n_elements(where(finite(mat_plt(19,*))))
+printf,U,' '
+printf,U,'percentagem de valores excluidos pela direccao do vento (270 a 90) e signal strength'
+printf,U,float(n_elements(where(finite(mat_plt(19,*),/NAN))))/float(n_elements(mat_plt(19,*)))*100.
+printf,U,' '
+printf,U,'minimo, maximo e media X90 com flag direcao vento e signal strength'
+printf,U,min(mat_plt(19,*),/NAN),max(mat_plt(19,*),/NAN),mean(mat_plt(19,*),/NAN)
+printf,U,' '
+printf,U,'minimo, maximo e media Xmax com flag direcao vento e signal strength'
+printf,U,min(mat_plt(18,*),/NAN),max(mat_plt(18,*),/NAN),mean(mat_plt(18,*),/NAN)
+printf,U,' '
+printf,U,'minimo, maximo e media Zeta com flag direcao vento e signal strength'
+printf,U,min(mat_plt(16,*),/NAN),max(mat_plt(16,*),/NAN),mean(mat_plt(16,*),/NAN)
+printf,U,' '
+printf,U,'minimo, maximo e media de X90 com Zeta positivo (estabilidade)'
+printf,U,min(mat_plt(19,where(mat_plt(16,*) GT 0.)),/NAN),max(mat_plt(19,where(mat_plt(16,*) GT 0.)),/NAN),$
+MEAN(mat_plt(19,where(mat_plt(16,*) GT 0.)),/NAN)
+printf,U,' '
+printf,U,'minimo, maximo e media de X90 com Zeta negativo (instabilidade)'
+printf,U,min(mat_plt(19,where(mat_plt(16,*) LT 0.)),/NAN),max(mat_plt(19,where(mat_plt(16,*) LT 0.)),/NAN),$
+MEAN(mat_plt(19,where(mat_plt(16,*) LT 0.)),/NAN)
+printf,U,' '
+printf,U,'correlacao entre LE e velocidade do vento (todos dados)'
+printf,U,CORRELATE(mat_plt(5,where(finite(mat_plt(5,*)))),mat_plt(12,where(finite(mat_plt(12,*)))))
+printf,U,' '
+printf,U,'correlacao entre fluxo CO2 e estabilidade (todos dados)'
+printf,U,CORRELATE(mat_plt(6,where(finite(mat_plt(6,*)))),mat_plt(16,where(finite(mat_plt(16,*)))))
+printf,U,' '
+printf,U,'correlacao entre fluxo CO2 e temperatura (todos dados)'
+printf,U,CORRELATE(mat_plt(6,where(finite(mat_plt(6,*)))),mat_plt(11,where(finite(mat_plt(11,*)))))
+printf,U,' '
+printf,U,'correlacao entre LE e velocidade do vento (ciclo diario)'
+printf,U,CORRELATE(ciclo_diario(3,1:24),ciclo_diario(10,1:24))
+printf,U,' '
+printf,U,'correlacao entre fluxo CO2 e estabilidade (ciclo diario)'
+printf,U,CORRELATE(ciclo_diario(4,1:24),ciclo_diario(14,1:24))
+printf,U,' '
+printf,U,'Correlate entre LE e wind velocity ',corr_LE_WIND
+FREE_LUN,U
+
+print, ' '
+print,'PROGRAM ENDED SUCCEFULLY, PLEASE CHECK RESULTS'
+print, ' '
+
+END
+
