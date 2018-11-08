@@ -68,8 +68,8 @@ def split_struct(struct, interval, freq):
         return False
 
     data = [struct["From"].replace(hour=00, minute=00, second=00) + timedelta(minutes=i)
-            for i in range(0, (24 * 60), interval)]
-    struct["Filtered"] = [[] for i in range(len(data))]
+            for i in range(0, (24 * 60) + 1, interval)]
+    struct["Filtered"] = [[] for i in range(len(data)-1)]
 
     for element in struct["RawData"]:
         index = [i for i in range(len(data) - 1) if
