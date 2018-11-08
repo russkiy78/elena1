@@ -56,9 +56,9 @@ def get_from_file(filename, file_format, freq):
                 })
                 # for testing only!
 
-                # counter += 1
-                # if counter == 100000:
-                #    return struct
+                #counter += 1
+                #if counter == 100000:
+                #   return struct
 
         return struct
 
@@ -68,14 +68,16 @@ def split_struct(struct, interval, freq):
         return False
 
     data = [struct["From"].replace(hour=00, minute=00, second=00) + timedelta(minutes=i)
-            for i in range(0, (24 * 60) + 1, interval)]
-    struct["Filtered"] = [[] for i in range(len(data)-1)]
+            for i in range(0, (24 * 60), interval)]
+    struct["Filtered"] = [[] for i in range(len(data))]
 
     for element in struct["RawData"]:
-        index = [i for i in range(len(data) - 1) if
-                 data[i] <= element['DateStamp'] < data[i + 1]]
-        if len(index) == 1:
-            struct["Filtered"][index[0]].append(element)
+        index = [i for i in range(len(data)) if
+                 data[i] <= element['DateStamp']]
+        if len(index) > 0:
+            struct["Filtered"][index[-1]].append(element)
+        else:
+            return False
     return struct
 
 
