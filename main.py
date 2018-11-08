@@ -73,7 +73,7 @@ def split_struct(struct, interval, freq):
 
     for element in struct["RawData"]:
         index = [i for i in range(len(data) - 1) if
-                 data[i] < element['DateStamp'] < data[i + 1]]
+                 data[i] <= element['DateStamp'] < data[i + 1]]
         if len(index) == 1:
             struct["Filtered"][index[0]].append(element)
     return struct
