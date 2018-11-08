@@ -1,105 +1,124 @@
 #!/usr/bin/python 
 
-#  Description: POST PROCESSING OF THE RAW DATASET: IRGASON (OS VERSION EC100.07.01), OUTPUT VIA RS485 PORT  
-#  Experiment: ANTARCTICA, 2018
-#  Current version: 0.01
-#  
-#  
-
-# ################## GENERAL COMMENTS #############################################################
-# Output data from the Irgason are collected  and stored in the "in-house" developed datalogger
-# the data loger is based on MOXA computer (https://www.moxa.com/product/IA260.htm).
-# It has a light version of linux as well as shell scripts combining the outputs from GPS and EC100,
-# and run the data saving process.
-# the final data is packed on bz2 file once a day.
-
-
-# #################### Libraries  ######################################################
 # import os
 import bz2
-import numpy
-from datetime import datetime
+import math
+import numpy as np
+from datetime import datetime, timedelta
 
-# ################### CONSTANTS #########################################################
-MU_WPL = 28.97 / 18.02
-R = 8.3143e-3  # kPa m3 K-1 mol-1
-RD = R / 28.97  # kPa m3 K-1 g-1
-RV = R / 18.02  # kPa m3 K-1 g-1
-sonic_azi = 137.
-SIG_STRG = 0.7
-von_karman = 0.4
-Zm = 2.0  # m
-gravity = 9.80665  # m s-2
-Lk = 2.0  # com o valor b == 3.7 (pag 516 klunj) L'~2.0 (figure A1)
-Ac = 4.28
-Ad = 1.68
-Bk = 3.42
-alpha1 = -0.8
-hd = 24.  # 24 horas
-XCO2 = 44.0095  # g mol-1
-XCO2_mg = 44009.5  # mg mol-1
-
-############################## NAME OF VARIABLES ############################################################
-#Ux, Uy and Uz are wind components,  IDL: x,y,z
-# SonicTemperature, IDL: ts
-# SonicDiagnosticFlag, IDL: diag_s
-# CO2Density, IDL: co2
-# H2ODensity, IDL: h20
-# GasDiagnosticFlag, IDL: diag_i???
-# AirTemperature, IDL: at
-# AirPressure, IDL: ap
-# CO2SignalStrengthNominally, IDL: co2ss
-# H2OSignalStrengthNominally, IDL: h2oss
-# PressureDifferential, IDL: press_diff !!!!!!!!!!!!!! NOT USED DURING PROCESSING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# SourceHousingTemperature, IDL: sht
-# DetectorHousingTemperature, IDL: dht
-# CounterArbitrary, IDL: counter_arb
-# SignatureArbitrary, IDL: sah???
-
-# ################ Working directory ########################################################################
+# ###########################CONSTANTS#################################
+FILE = "IRGASON-181012_1229.dat.bz2"  # relative path
+FORMAT = "08"  # "08"|"07"
+FREQUENCY = 10
+INTERVAL = 30
 
 
-def get_from_file(filename):
-    structure = []
+# ############################################################
+
+def get_from_file(filename, file_format, freq):
+    struct = {
+        "Format": file_format,
+        "Frequency": freq,
+        "From": datetime.max,
+        "To": datetime.min,
+        "Data": []}
     with bz2.BZ2File(filename, "r") as fobj:
+        counter = 0
         for line in fobj:
             line = line.decode("utf-8").strip().split(',')
-            firsfline = line[0].split(' ')
-            structure.append({
-                'DateStamp': datetime.strptime(firsfline[0] + firsfline[1], '%y%m%d%H%M%S%Z'),
-                'Ux': float(firsfline[2]),
-                'Uy': float(line[1]),
-                'Uz': float(line[2]),
-                'SonicTemperature': float(line[3]),
-                'SonicDiagnosticFlag': float(line[4]),
-                'CO2Density': float(line[5]),
-                'H2ODensity': float(line[6]),
-                'GasDiagnosticFlag': float(line[7]),
-                'AirTemperature': float(line[8]),
-                'AirPressure': float(line[9]),
-                'CO2SignalStrengthNominally': float(line[10]),
-                'H2OSignalStrengthNominally': float(line[11]),
-                'PressureDifferential': float(line[12]),
-                'SourceHousingTemperature': float(line[13]),
-                'DetectorHousingTemperature': float(line[14]),
-                'CounterArbitrary': int(line[15]),
-                'SignatureArbitrary': line[16]
-            })
-        return structure
+            firstfline = line[0].split(' ')
+            if len(line) == 17:
+                dt = datetime.strptime(firstfline[0] + firstfline[1], '%y%m%d%H%M%S%Z')
+                if dt > struct["To"]:
+                    struct["To"] = dt
+                if dt < struct["From"]:
+                    struct["From"] = dt
+                struct["Data"].append({
+                    'DateStamp': dt,
+                    'Ux': float(firstfline[2]) if firstfline[2] else numpy.nan,
+                    'Uy': float(line[1]) if line[1] else numpy.nan,
+                    'Uz': float(line[2]) if line[2] else numpy.nan,
+                    'SonicTemperature': float(line[3]) if line[3] else numpy.nan,
+                    'SonicDiagnosticFlag': float(line[4]) if line[4] else numpy.nan,
+                    'CO2Density': float(line[5]) if line[5] else numpy.nan,
+                    'H2ODensity': float(line[6]) if line[6] else numpy.nan,
+                    'GasDiagnosticFlag': float(line[7]) if line[7] else numpy.nan,
+                    'AirTemperature': float(line[8]) if line[8] else numpy.nan,
+                    'AirPressure': float(line[9]) if line[9] else numpy.nan,
+                    'CO2SignalStrengthNominally': float(line[10]) if line[10] else numpy.nan,
+                    'H2OSignalStrengthNominally': float(line[11]) if line[11] else numpy.nan,
+                    'PressureDifferential': float(line[12]) if line[12] else numpy.nan,
+                    'CO2Correct': float(line[12]) if line[12] else numpy.nan,
+                    'SourceHousingTemperature': float(line[13]) if line[13] else numpy.nan,
+                    'DetectorHousingTemperature': float(line[14]) if line[14] else numpy.nan,
+                    'CounterArbitrary': int(line[15]) if line[15] else numpy.nan,
+                    'SignatureArbitrary': line[16] if line[16] else ''
+                })
+                # for testing only!
 
-def despikes (data, num_stdev,nmh, name_out):
-    co2_final = data
-    nn_co2 = num_stdev
-    media_co2 = numpy.mean(data)
+                # counter += 1
+                # if counter == 100000:
+                #    return struct
 
-    # variable stats_co2 never used in this function!
-    # stats_co2 = moment(data, sdev=sigma_co2)
-    # variable sigma_co2 is implicitly come from outer space!
+        return struct
 
 
-    # med_mov = TS_SMOOTH(data, 6000, / DOUBLE)
+def split_struct(struct, interval, freq):
+    if len(struct["Data"]) < 1:
+        return False
+    data = [struct["From"].replace(hour=00, minute=00, second=00) + timedelta(minutes=i)
+            for i in range(0, (24 * 60), interval)]
+    struct["Filtered"] = [[] for i in range(len(data))]
+
+    for element in struct["Data"]:
+        index = [i for i in range(len(data) - 1) if
+                 data[i] < element['DateStamp'] < data[i + 1]]
+        if len(index) == 1:
+            struct["Filtered"][index[0]].append(element)
+    return struct
 
 
-despikes (1,2,3,4)
+def filter_struct(struct, interval, freq):
+    struct["Filtered"] = [x for x in struct["Filtered"] if len(x) >= freq * interval * 60 / 2]
+    return struct
 
-# print(get_from_file("IRGASON-180201_0000.dat.bz2")[0])
+
+def add_t_corrected(x):
+    x.update({"TemperatureC": (x["SonicTemperature"] + 273.15) /
+                              (1 + 0.32 * x['H2ODensity'] * 8.3143 * 0.001 * (x["SonicTemperature"] + 273.15) /
+                               18.02 * x['AirPressure'])
+              })
+    return x
+
+
+def diagnostic_filter(struct):
+    for index in range(len(struct["Filtered"])):
+        struct["Filtered"][index] = [x for x in struct["Filtered"][index]
+                                     if x['SonicDiagnosticFlag'] == 0
+                                     and x['GasDiagnosticFlag'] == 0
+                                     and x['CO2SignalStrengthNominally'] >= 0.7
+                                     and x['H2OSignalStrengthNominally'] >= 0.7
+                                     ]
+    return struct
+
+
+print("Get from file...")
+structure = get_from_file(FILE, FORMAT, FREQUENCY)
+
+print("Add Temperature Corrected")
+structure["Data"] = [add_t_corrected(x) for x in structure["Data"]]
+
+print("Split by %d min intervals" % INTERVAL)
+structure = split_struct(structure, INTERVAL, FREQUENCY)
+
+print("Filter for number of measurement by interval (min 50% for each) ")
+structure = filter_struct(structure, INTERVAL, FREQUENCY)
+
+print("Filter for SonicDiagnosticFlag  GasDiagnosticFlag CO2SignalStrengthNominally H2OSignalStrengthNominally")
+structure = diagnostic_filter(structure)
+
+print("Filter again for number of measurement by interval (min 50% for each) ")
+structure = filter_struct(structure, INTERVAL, FREQUENCY)
+
+data_q_c = len(structure["Filtered"]) / (24 * 60 / INTERVAL / 100)
+print("Data Quality Control = {} % ".format(data_q_c))
