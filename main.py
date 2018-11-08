@@ -3,13 +3,13 @@
 # import os
 import bz2
 import math
-import numpy as np
+import numpy
 from datetime import datetime, timedelta
 
 # ###########################CONSTANTS#################################
 FILE = "IRGASON-181012_1229.dat.bz2"  # relative path
 FORMAT = "08"  # "08"|"07"
-FREQUENCY = 10
+FREQUENCY = 20
 INTERVAL = 30
 
 
@@ -21,7 +21,7 @@ def get_from_file(filename, file_format, freq):
         "Frequency": freq,
         "From": datetime.max,
         "To": datetime.min,
-        "Data": []}
+        "RawData": []}
     with bz2.BZ2File(filename, "r") as fobj:
         counter = 0
         for line in fobj:
@@ -33,7 +33,7 @@ def get_from_file(filename, file_format, freq):
                     struct["To"] = dt
                 if dt < struct["From"]:
                     struct["From"] = dt
-                struct["Data"].append({
+                struct["RawData"].append({
                     'DateStamp': dt,
                     'Ux': float(firstfline[2]) if firstfline[2] else numpy.nan,
                     'Uy': float(line[1]) if line[1] else numpy.nan,
@@ -64,13 +64,14 @@ def get_from_file(filename, file_format, freq):
 
 
 def split_struct(struct, interval, freq):
-    if len(struct["Data"]) < 1:
+    if len(struct["RawData"]) < 1:
         return False
+
     data = [struct["From"].replace(hour=00, minute=00, second=00) + timedelta(minutes=i)
             for i in range(0, (24 * 60), interval)]
     struct["Filtered"] = [[] for i in range(len(data))]
 
-    for element in struct["Data"]:
+    for element in struct["RawData"]:
         index = [i for i in range(len(data) - 1) if
                  data[i] < element['DateStamp'] < data[i + 1]]
         if len(index) == 1:
@@ -106,7 +107,7 @@ print("Get from file...")
 structure = get_from_file(FILE, FORMAT, FREQUENCY)
 
 print("Add Temperature Corrected")
-structure["Data"] = [add_t_corrected(x) for x in structure["Data"]]
+structure["RawData"] = [add_t_corrected(x) for x in structure["RawData"]]
 
 print("Split by %d min intervals" % INTERVAL)
 structure = split_struct(structure, INTERVAL, FREQUENCY)
@@ -119,6 +120,8 @@ structure = diagnostic_filter(structure)
 
 print("Filter again for number of measurement by interval (min 50% for each) ")
 structure = filter_struct(structure, INTERVAL, FREQUENCY)
+
+# print ([ x['SonicDiagnosticFlag'] for x in structure["RawData"]])
 
 data_q_c = len(structure["Filtered"]) / (24 * 60 / INTERVAL / 100)
 print("Data Quality Control = {} % ".format(data_q_c))
