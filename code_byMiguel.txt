@@ -193,7 +193,9 @@ FOR i=0L, nlinhas-1 DO BEGIN
 #	IF (h2oss(i) LT .7) THEN h2o(i)=!VALUES.D_NAN
 
 	ts_absolute(i)=ts(i)+273.15
-	###################Humidity correction of sonic temperature is applied ###################
+###################Humidity correction of sonic temperature is applied ###################
+################### SEE EQUATION 1 IN THE LIST OF EQs################################  Miguel: would you correct equation!
+
 	tc(i)=ts_absolute(i)/(1.+0.32*h2o(i)*R*ts_absolute(i)/(ap(i)*18.02))
 
 endfor
@@ -411,6 +413,7 @@ for i=0, cc-1 do begin
 	printf,66,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),n_elements(periodo),n_elements(flag_final),$
 	n_elements(x_final),format='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",3(I6,","))'
 
+################# MIGUEL: DO WE NEED TO CALCULATE THE MEAN AND STDV FOR THE VALUES WITHOUT DETRENDING??? ################
 ################## these varables are calculated for every 30 min and used as constant within the interval ###############
 ######### rho is density of air ##########################################################################################
     rho_d_mean=(media_ap/((media_tc)*RD))-(media_h2o*MU_WPL) ;** g m-3
@@ -420,12 +423,11 @@ for i=0, cc-1 do begin
     CP=1004.67*(1+.84*(0.622*media_h2o*RV*(media_tc/media_ap)))  ; J Kg-1 K-1
 ##########################################################################################################################
 
+################# MIGUEL: DO WE NEED TO CALCULATE THE WIND SPEED AND DIRECTION WITHOUT DOBLE ROTATION??? ################
 ################### to calculate the wind speed and wind direction ###################################################
 	wind_speed=sqrt(media_x^2.+media_y^2.)
 	IF wind_speed EQ 0. THEN wind_speed=!VALUES.D_NAN
-
 	r2d=180./!pi
-
 	wind_dir=atan(-media_y,media_x)*r2d
 
 	;** wind dir compass
@@ -444,8 +446,9 @@ for i=0, cc-1 do begin
 	h2o_final_lnf=dblarr(np(i))
 
 
-### the detrending #################################################################################################################################
+### the detrending ################################################################################################
 	;** serve de media "movel" nas proximas variancias e covariancias
+########## MIGUEL: FORMULA FOR THE LINEAR DETRENDING ?? OR CODE FROM OPEN LIBRARY ? ##############	
     fit_x=LINFIT(lindgen(n_elements(x_final)),x_final,YFIT=xrecta)
 	x_final_lnf=lindgen(n_elements(x_final))*fit_x(1)+fit_x(0)
 
