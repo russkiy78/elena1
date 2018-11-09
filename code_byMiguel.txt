@@ -396,54 +396,31 @@ for i=0, cc-1 do begin
 	media_co2=MEAN(co2_final_sp,/NAN)
 	media_h2o=MEAN(h2o_final_sp,/NAN)
 
-       ### to calculate the mean for the date which were not despiked ###############################################################
+       ### to calculate the mean for the date which were not despiked ####################################################
        #;*** medias sem despikes
 	media_at=MEAN(at(periodo),/NAN)
 	media_ap=MEAN(ap(periodo),/NAN)
 	media_co2ss(h)=MEAN(co2ss(periodo),/NAN)
 	media_h2oss=MEAN(h2oss(periodo),/NAN)
 
-       ### to calculate Standard deviation of vertical wind component ###############################################################
+       ### to calculate Standard deviation of vertical wind component ##################################################
 	stdev_z=STDDEV(z_final,/NAN)
  
-       ######### control printing ################################################################################################### 
+       ######### control printing ######################################################################################3
        #** faz o controlo final
 	printf,66,ano(0),mes(0),dia(0),h_ini(i),m_ini(i),h_fim(i),m_fim(i),n_elements(periodo),n_elements(flag_final),$
 	n_elements(x_final),format='(A,"/",A,"/",A," ",I2,":",I2," ",I2,":",I2,",",3(I6,","))'
 
-
-       ######## to calculate the variance of wind components
-        var_todas_x(h)=(1./np(i))*TOTAL((x_final-media_x)^2.,/NAN)
-	var_todas_y(h)=(1./np(i))*TOTAL((y_final-media_y)^2.,/NAN)
-	var_todas_z(h)=(1./np(i))*TOTAL((z_final-media_z)^2.,/NAN)
-      ### to calculate the covariance between two values #########################################################################
-     ####### NOT USED AT ALL #####################################################################################################
-	cov_todas_xy(h)=(1./np(i))*TOTAL((x_final-media_x)*(y_final-media_y),/NAN)
-	cov_todas_xz(h)=(1./np(i))*TOTAL((x_final-media_x)*(z_final-media_z),/NAN)
-	cov_todas_yz(h)=(1./np(i))*TOTAL((y_final-media_y)*(z_final-media_z),/NAN)
-	cov_todas_tsx(h)=(1./np(i))*TOTAL((ts_final-media_ts)*(x_final-media_x),/NAN)
-	cov_todas_tsy(h)=(1./np(i))*TOTAL((ts_final-media_ts)*(y_final-media_y),/NAN)
-	cov_todas_tsz(h)=(1./np(i))*TOTAL((ts_final-media_ts)*(z_final-media_z),/NAN)
-	cov_todas_tcx(h)=(1./np(i))*TOTAL((tc_final-media_tc)*(x_final-media_x),/NAN)
-	cov_todas_tcy(h)=(1./np(i))*TOTAL((tc_final-media_tc)*(y_final-media_y),/NAN)
- 	cov_todas_tcz(h)=(1./np(i))*TOTAL((tc_final-media_tc)*(z_final-media_z),/NAN)
-	cov_todas_co2x(h)=(1./np(i))*TOTAL((co2_final-media_co2)*(x_final-media_x),/NAN)
-	cov_todas_co2y(h)=(1./np(i))*TOTAL((co2_final-media_co2)*(y_final-media_y),/NAN)
- 	cov_todas_co2z(h)=(1./np(i))*TOTAL((co2_final-media_co2)*(z_final-media_z),/NAN)
-	cov_todas_h2ox(h)=(1./np(i))*TOTAL((h2o_final-media_h2o)*(x_final-media_x),/NAN)
-	cov_todas_h2oy(h)=(1./np(i))*TOTAL((h2o_final-media_h2o)*(y_final-media_y),/NAN)
- 	cov_todas_h2oz(h)=(1./np(i))*TOTAL((h2o_final-media_h2o)*(z_final-media_z),/NAN)
-
-################## these varables are calculated for every 30 min and used as constant within the interval ######################
-######### rho is density of air #################################################################################################
+################## these varables are calculated for every 30 min and used as constant within the interval ###############
+######### rho is density of air ##########################################################################################
     rho_d_mean=(media_ap/((media_tc)*RD))-(media_h2o*MU_WPL) ;** g m-3
     rho_a_mean=(rho_d_mean+media_h2o)/1000.		;** Kg m-3
     sigma_wpl=media_h2o/rho_d_mean
     LV=2501.-(2.37*(media_tc-273.15)) ; J g-1
     CP=1004.67*(1+.84*(0.622*media_h2o*RV*(media_tc/media_ap)))  ; J Kg-1 K-1
-#################################################################################################################################
+##########################################################################################################################
 
-################### to calculate the wind speed and wind direction ##############################################################
+################### to calculate the wind speed and wind direction ###################################################
 	wind_speed=sqrt(media_x^2.+media_y^2.)
 	IF wind_speed EQ 0. THEN wind_speed=!VALUES.D_NAN
 
