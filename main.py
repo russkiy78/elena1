@@ -6,6 +6,7 @@ import math
 import numpy
 from datetime import datetime, timedelta
 import time
+
 start_time = time.time()
 
 # ###########################CONFIGURATION OF THE EXPERIMENT#################################
@@ -64,9 +65,9 @@ def get_from_file(filename, file_format, freq):
                 })
                 # for testing only!
 
-                # counter += 1
-                # if counter == 100000:
-                #   return struct
+                counter += 1
+                if counter == 100000:
+                    return struct
 
         return struct
 
@@ -131,20 +132,17 @@ print("Split by %d min intervals" % INTERVAL)
 structure = split_struct(structure, INTERVAL)
 print("--- %s seconds ---" % (time.time() - start_time))
 
-print(len(structure["Filtered"]))
-
 print("Filter for number of measurement by interval (min 50% for each) ")
 structure["Filtered"] = filter_struct(structure["Filtered"], INTERVAL, FREQUENCY, 0.5)
 print("--- %s seconds ---" % (time.time() - start_time))
-
-print(len(structure["Filtered"]))
 
 print("Filter for SonicDiagnosticFlag  GasDiagnosticFlag CO2SignalStrengthNominally H2OSignalStrengthNominally")
 structure["Filtered"] = diagnostic_filter(structure["Filtered"])
 print("--- %s seconds ---" % (time.time() - start_time))
 
-print(structure["Filtered"][0]['From'])
-print(len(structure["Filtered"][0]['Data']))
+# print(structure["Filtered"][0]['From'])
+# print(len(structure["Filtered"][0]['Data']))
+# print(structure["Filtered"][0]['Data'][10])
 
 data_q_c = len(structure["Filtered"]) / (24 * 60 / INTERVAL / 100)
 print("Data Quality Control = {} % ".format(data_q_c))
