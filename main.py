@@ -166,9 +166,10 @@ def drawplt(struct):
                     'Despike {} {} {}-{} (found spikes {})'.format(struct[i]['From'].strftime("%H-%M-%S"),
                                                                    DESPIKING_VALUES[value], interval, 6,
                                                                    struct[i]['Spikes'][DESPIKING_VALUES[value]]))
-                plt.savefig('/home/russkiy/elenagraph/despike/{}/{}-{}-6.png'.format(struct[i]['From'].strftime("%H-%M-%S"),
+                plt.savefig(
+                    '/home/russkiy/elenagraph/despike/{}/{}-{}-6.png'.format(struct[i]['From'].strftime("%H-%M-%S"),
                                                                              DESPIKING_VALUES[value], interval),
-                            format='png')
+                    format='png')
 
 
 def get_interpolate(mass, index):
@@ -217,7 +218,7 @@ def despiking(struct):
                                     if despiking_index == 0:
                                         struct[i]['Spikes'][DESPIKING_VALUES[value]] += 1
                                     # else:
-                                        # print('{} spike {}'.format(DESPIKING_VALUES[value], despiking_index))
+                                    # print('{} spike {}'.format(DESPIKING_VALUES[value], despiking_index))
                     if no_spike:
                         break
 
@@ -236,7 +237,7 @@ def moving_average(a, n=100):
 # ######################## MAIN CODE ############################################################################
 
 print("Get from file...")
-structure = get_from_file(FILE, FORMAT, FREQUENCY, INTERVAL, 3)
+structure = get_from_file(FILE, FORMAT, FREQUENCY, INTERVAL, 0)
 print("--- %s seconds ---" % (time.time() - start_time))
 
 # DELETE EMPTY INTERVALS
@@ -258,13 +259,11 @@ print("--- %s seconds ---" % (time.time() - start_time))
 structure["Data"] = despiking(structure["Data"])
 print("--- %s seconds ---" % (time.time() - start_time))
 
-
 for i in range(len(structure["Data"])):
     for value in range(len(DESPIKING_VALUES)):
         print('{} {} spikes {}'.format(structure["Data"][i]["From"],
                                        DESPIKING_VALUES[value],
                                        structure["Data"][i]['Spikes'][DESPIKING_VALUES[value]]))
-
 
 drawplt(structure["Data"])
 '''
