@@ -15,25 +15,26 @@ FILE = "IRGASON-181012_1229.dat.bz2"  # relative path to file
 FORMAT = "08"  # "08"|"07"            # OS EC100 08.01 or EC100 07.01
 FREQUENCY = 20  # the unpromtem output frequency, Hz
 INTERVAL = 30  # interval for the flux calculation, min
-Sonic_azimut = 137  # direction of the instriments, degree
-Sonic_height = 2  # height of intrument, m
+Sonic_azimut = 137  # direction of the instruments, degree
+Sonic_height = 2  # height of instrument, m
 
-# ###################### PHYSICAL COSTANTS #################################################
+# ###################### PHYSICAL CONSTANTS #################################################
 R = 8.3144598  # the universal gas constant, kg m2 s−2 K−1 mol−1
+PHYS_R = 8.3144598  # the universal gas constant, kg m2 s−2 K−1 mol−1
 
 # ###################### DESPIKING PARAMETERS #################################################
 DESPIKING_VALUES = ['Ux', 'Uy', 'Uz', 'SonicTemperature', 'CorrectedTemperature', 'CO2Density', 'H2ODensity']
 DESPIKING_THRESHOLD = [3.5, 3.5, 5, 3.5, 3.5, 3.5, 3.5]
 DESPIKING_MAXCIRCLES = 20
-DESPIKING_MAX_IN_ROW = 3
+DESPIKING_MAX_IN_ROW = 40
 DESPIKING_MA_PERIOD = 600
 
-# ###################### EXPERIMENTAL CONSTANTS (FOR DEBUGGING ONLY) ############################
-DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) must be 0 for production
+# ###################### !!!DEBUG CONSTANTS (FOR DEBUGGING ONLY)!!! ############################
+DEBUG_MAX_INTERVALS = 3  # the number of intervals (received from the file) MUST BE 0 FOR PRODUCTION
 
 # ###################### DRAWING CONSTANTS  ############################
 DRAW_PATH = '/home/russkiy/elenagraph/'
-DRAW_DPI = 1200
+DRAW_DPI = 400
 DRAW_FORMAT = 'png'
 
 DRAW_WIDTH_MAIN = 0.1
@@ -168,7 +169,8 @@ def drawplt(struct):
                 'Despike {} {} (found spikes {})'.format(struct[i]['From'].strftime("%H-%M-%S"),
                                                          DESPIKING_VALUES[value],
                                                          struct[i]['Spikes'][DESPIKING_VALUES[value]]))
-            plt.savefig('{}{}.png'.format(DRAW_PATH, DESPIKING_VALUES[value]), format=DRAW_FORMAT, dpi=DRAW_DPI)
+            plt.savefig('{}{}-{}.png'.format(DRAW_PATH, struct[i]['From'].strftime("%H-%M-%S"), DESPIKING_VALUES[value]),
+                        format=DRAW_FORMAT, dpi=DRAW_DPI)
             # plt.show()
 
 
