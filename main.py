@@ -21,9 +21,15 @@ Sonic_height = 2  # height of intrument, m
 # ###################### PHYSICAL COSTANTS #################################################
 R = 8.3144598  # the universal gas constant, kg m2 s−2 K−1 mol−1
 
+# ###################### DESPIKING PARAMETERS #################################################
 DESPIKING_VALUES = ['Ux', 'Uy', 'Uz', 'SonicTemperature', 'CorrectedTemperature', 'CO2Density', 'H2ODensity']
 DESPIKING_THRESHOLD = [3.5, 3.5, 5, 3.5, 3.5, 3.5, 3.5]
 DESPIKING_MAXCIRCLES = 20
+DESPIKING_MAX_IN_ROW = 3
+DESPIKING_MA_PERIOD = 600
+
+# ###################### EXPERIMENTAL CONSTANTS (FOR DEBUGGING ONLY) ############################
+DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) must be 0 for production
 
 
 # ############################# FUNCTIONS DECLARATION ######################################
@@ -125,51 +131,36 @@ def diagnostic_filter(struct):
 
 def drawplt(struct):
     for i in range(len(struct)):
+        '''
         try:
             os.mkdir('/home/russkiy/elenagraph/despike/{}'.format(struct[i]['From'].strftime("%H-%M-%S")))
         except FileExistsError:
             print('mkdir')
-
+        '''
         for value in range(len(DESPIKING_VALUES)):
-
             print(DESPIKING_VALUES[value])
 
             math_mass = numpy.array([x[DESPIKING_VALUES[value]] for x in struct[i]['Data']])
+            mean = numpy.mean(math_mass)
+            std = numpy.nanstd(math_mass)
 
-            step = math.ceil(len(math_mass) / 6)
-            interval = 0
-            for from_index in range(0, len(math_mass), step):
-                interval += 1
+            ma = moving_average(math_mass, DESPIKING_MA_PERIOD)
+            plt.clf()
+            plt.plot(math_mass, color='black')
+            plt.plot(ma, color='blue')
+            plt.plot(ma + float(std * DESPIKING_THRESHOLD[value]), color='grey')
+            plt.plot(ma - float(std * DESPIKING_THRESHOLD[value]), color='grey')
+            plt.plot(numpy.full(len(math_mass), mean), color='green')
 
-                mean = numpy.mean(math_mass[from_index:step + from_index])
-                std = numpy.std(math_mass[from_index:step + from_index])
-
-                plt.clf()
-
-                plt.plot(math_mass[from_index:step + from_index], color='black')
-
-                plt.plot(moving_average(math_mass[from_index:step + from_index]), color='red')
-
-                plt.plot(
-                    moving_average(math_mass[from_index:step + from_index] + float(std * DESPIKING_THRESHOLD[value])),
-                    color='grey')
-                plt.plot(moving_average(
-                    math_mass[from_index:step + from_index] - float(std * DESPIKING_THRESHOLD[value])),
-                    color='grey')
-
-                plt.plot(moving_average(numpy.full(step, float(mean + std * DESPIKING_THRESHOLD[value]))), color='blue')
-                plt.plot(moving_average(numpy.full(step, float(mean - std * DESPIKING_THRESHOLD[value]))), color='blue')
-
-                plt.plot(numpy.full(step, mean), color='green')
-
-                plt.title(
-                    'Despike {} {} {}-{} (found spikes {})'.format(struct[i]['From'].strftime("%H-%M-%S"),
-                                                                   DESPIKING_VALUES[value], interval, 6,
-                                                                   struct[i]['Spikes'][DESPIKING_VALUES[value]]))
-                plt.savefig(
-                    '/home/russkiy/elenagraph/despike/{}/{}-{}-6.png'.format(struct[i]['From'].strftime("%H-%M-%S"),
-                                                                             DESPIKING_VALUES[value], interval),
-                    format='png')
+            plt.title(
+                'Despike {} {} (found spikes {})'.format(struct[i]['From'].strftime("%H-%M-%S"),
+                                                         DESPIKING_VALUES[value],
+                                                         struct[i]['Spikes'][DESPIKING_VALUES[value]]))
+            # plt.savefig(
+            #    '/home/russkiy/elenagraph/despike/{}/{}-{}-6.png'.format(struct[i]['From'].strftime("%H-%M-%S"),
+            #                                                             DESPIKING_VALUES[value], interval),
+            #    format='png')
+            plt.show()
 
 
 def get_interpolate(mass, index):
@@ -191,36 +182,46 @@ def despiking(struct):
             print(DESPIKING_VALUES[value])
 
             struct[i]['Spikes'][DESPIKING_VALUES[value]] = 0
-
             math_mass = numpy.array([x[DESPIKING_VALUES[value]] for x in struct[i]['Data']])
 
-            print(len(math_mass))
+            for despiking_index in range(DESPIKING_MAXCIRCLES):
+                no_spike = True
 
-            step = math.ceil(len(math_mass) / 6)
+                # get moving average
+                ma = moving_average(math_mass, DESPIKING_MA_PERIOD)
 
-            for from_index in range(0, len(math_mass), step):
+                # get standart deviation, ignoring NAN values
+                std = numpy.nanstd(math_mass)
 
-                for despiking_index in range(DESPIKING_MAXCIRCLES):
-                    no_spike = True
+                dindex = 0
 
-                    mean = numpy.mean(math_mass[from_index:step + from_index])
-                    std = numpy.std(math_mass[from_index:step + from_index])
-                    to_index = step + from_index if step + from_index < len(math_mass) else len(math_mass)
+                while dindex < len(math_mass):
 
-                    if mean != numpy.nan:
-                        for dindex in range(from_index, to_index):
-                            if math_mass[dindex] != numpy.nan:
-                                if math_mass[dindex] > mean + std * DESPIKING_THRESHOLD[value] or \
-                                        math_mass[dindex] < mean - std * DESPIKING_THRESHOLD[value]:
+                    spike_found = 0
+                    # checking for spike
+                    while dindex + spike_found < len(math_mass) and \
+                            (math_mass[dindex + spike_found] > ma[dindex + spike_found] +
+                             std * DESPIKING_THRESHOLD[value] or
+                             math_mass[dindex + spike_found] < ma[dindex + spike_found] -
+                             std * DESPIKING_THRESHOLD[value]):
+                        spike_found += 1
 
-                                    math_mass[dindex] = get_interpolate(math_mass, dindex)
-                                    no_spike = False
-                                    if despiking_index == 0:
-                                        struct[i]['Spikes'][DESPIKING_VALUES[value]] += 1
-                                    # else:
-                                    # print('{} spike {}'.format(DESPIKING_VALUES[value], despiking_index))
-                    if no_spike:
-                        break
+                    if 0 < spike_found <= DESPIKING_MAX_IN_ROW:
+
+                        # add one spike
+                        if despiking_index == 0:
+                            struct[i]['Spikes'][DESPIKING_VALUES[value]] += 1
+                        no_spike = False
+
+                        # replace spikes with mean values
+                        for spike_i in range(dindex, dindex + spike_found):
+                            math_mass[spike_i] = ma[spike_i]
+
+                    dindex += (spike_found + 1)
+
+                # no spikes at this round -  all done, break the circle
+                if no_spike:
+                    break
 
             # write to Data structure
             for x in range(len(struct[i]['Data'])):
@@ -228,16 +229,15 @@ def despiking(struct):
     return struct
 
 
-def moving_average(a, n=100):
-    ret = numpy.cumsum(a, dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1:] / n
+def moving_average(y, n):
+    y_padded = numpy.pad(y, (n // 2, n - 1 - n // 2), mode='edge')
+    return numpy.convolve(y_padded, numpy.ones((n,)) / n, mode='valid')
 
 
 # ######################## MAIN CODE ############################################################################
 
 print("Get from file...")
-structure = get_from_file(FILE, FORMAT, FREQUENCY, INTERVAL, 0)
+structure = get_from_file(FILE, FORMAT, FREQUENCY, INTERVAL, DEBUG_MAX_INTERVALS)
 print("--- %s seconds ---" % (time.time() - start_time))
 
 # DELETE EMPTY INTERVALS
