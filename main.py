@@ -11,42 +11,44 @@ import time
 start_time = time.time()
 
 # ###########################CONFIGURATION OF THE EXPERIMENT#################################
-FILE = "IRGASON-181012_1229.dat.bz2"  # relative path to file
-FORMAT = "08"  # "08"|"07"            # OS EC100 08.01 or EC100 07.01
-FREQUENCY = 20  # the unpromtem output frequency, Hz
+# FILE = "IRGASON-181012_1229.dat.bz2"  # relative path to file
+FILE = "IRGASON-180201_0000.dat.bz2"
+FORMAT = "07"  # "08"|"07"            # OS EC100 08.01 or EC100 07.01
+FREQUENCY = 10  # the unpromtem output frequency, Hz
 INTERVAL = 30  # interval for the flux calculation, min
 Sonic_azimut = 137  # direction of the instruments, degree
 Sonic_height = 2  # height of instrument, m
 
 # ###################### PHYSICAL CONSTANTS #################################################
-R = 8.3144598  # the universal gas constant, kg m2 s−2 K−1 mol−1
-PHYS_R = 8.3144598  # the universal gas constant, kg m2 s−2 K−1 mol−1
+PHYS_R = 8.3144598 / 1000  # the universal gas constant, !kPa! m3 K-1 mol-1
 
 # ###################### DESPIKING PARAMETERS #################################################
 DESPIKING_VALUES = ['Ux', 'Uy', 'Uz', 'SonicTemperature', 'CorrectedTemperature', 'CO2Density', 'H2ODensity']
 DESPIKING_THRESHOLD = [3.5, 3.5, 5, 3.5, 3.5, 3.5, 3.5]
 DESPIKING_MAXCIRCLES = 20
-DESPIKING_MAX_IN_ROW = 40
-DESPIKING_MA_PERIOD = 600
+DESPIKING_MAX_IN_ROW = 10  # maximum spikes in a row that are counted as spikes
+DESPIKING_MA_PERIOD = 60  #
 
 # ###################### !!!DEBUG CONSTANTS (FOR DEBUGGING ONLY)!!! ############################
-DEBUG_MAX_INTERVALS = 3  # the number of intervals (received from the file) MUST BE 0 FOR PRODUCTION
+DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) MUST BE 0 FOR PRODUCTION
 
 # ###################### DRAWING CONSTANTS  ############################
 DRAW_PATH = '/home/russkiy/elenagraph/'
 DRAW_DPI = 400
 DRAW_FORMAT = 'png'
+DRAW_SAVE_TO_FILE = True  # save graphic to dist instead of show
+DRAW_FILENAME_TEMPLATE = "%Y-%m-%d %H:%M:%S"
 
-DRAW_WIDTH_MAIN = 0.1
+# DRAW_WIDTH_MAIN = 0.5
 DRAW_COLOR_MAIN = 'black'
 
-DRAW_WIDTH_MEAN = 0.5
+DRAW_WIDTH_MEAN = 0.2
 DRAW_COLOR_MEAN = 'green'
 
-DRAW_WIDTH_MA = 0.5
+DRAW_WIDTH_MA = 0.2
 DRAW_COLOR_MA = 'red'
 
-DRAW_WIDTH_SDMA = 0.5
+DRAW_WIDTH_SDMA = 0.2
 DRAW_COLOR_SDMA = 'blue'
 
 
@@ -121,11 +123,14 @@ def get_from_file(filename, file_format, freq, interval, interval_count=0):
 # ############## SONIC TEMPERATURE HUMIDITY CORRECTION: Kaimal and Gaynor (1991) ###############################
 def add_t_corrected(x, r):
     for i in range(len(x['Data'])):
-        x['Data'][i].update({"CorrectedTemperature": (x['Data'][i]["SonicTemperature"] + 273.15) /
-                                                     (1 + 0.32 * x['Data'][i]['H2ODensity'] * 1000 * r *
-                                                      (x['Data'][i]["SonicTemperature"] + 273.15)) /
-                                                     18.02 * x['Data'][i]['AirPressure'] * 1000
-                             })
+
+        tc = numpy.nan
+
+        if x['Data'][i]["H2ODensity"] > 0 and x['Data'][i]['AirPressure'] > 0:
+            tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
+                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * r * (
+                            x['Data'][i]["SonicTemperature"] + 273.15)) / (18.02 / 1000 * x['Data'][i]['AirPressure']))
+        x['Data'][i].update({"CorrectedTemperature": tc})
     return x
 
 
@@ -159,19 +164,24 @@ def drawplt(struct):
 
             ma = moving_average(math_mass, DESPIKING_MA_PERIOD)
             plt.clf()
-            plt.plot(math_mass, color=DRAW_COLOR_MAIN, linewidth=DRAW_WIDTH_MAIN)
+            plt.plot(numpy.full(len(math_mass), mean), color=DRAW_COLOR_MEAN, linewidth=DRAW_WIDTH_MEAN)
+            plt.plot(math_mass, ',', color=DRAW_COLOR_MAIN)
             plt.plot(ma, color=DRAW_COLOR_MA, linewidth=DRAW_WIDTH_MA)
             plt.plot(ma + float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
             plt.plot(ma - float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
-            plt.plot(numpy.full(len(math_mass), mean), color=DRAW_COLOR_MEAN, linewidth=DRAW_WIDTH_MEAN)
+
 
             plt.title(
-                'Despike {} {} (found spikes {})'.format(struct[i]['From'].strftime("%H-%M-%S"),
+                '{} {} (spikes {})'.format(struct[i]['From'].strftime(DRAW_FILENAME_TEMPLATE),
                                                          DESPIKING_VALUES[value],
                                                          struct[i]['Spikes'][DESPIKING_VALUES[value]]))
-            plt.savefig('{}{}-{}.png'.format(DRAW_PATH, struct[i]['From'].strftime("%H-%M-%S"), DESPIKING_VALUES[value]),
-                        format=DRAW_FORMAT, dpi=DRAW_DPI)
-            # plt.show()
+            if DRAW_SAVE_TO_FILE:
+                plt.savefig(
+                    '{}{}-{}.{}'.format(DRAW_PATH, struct[i]['From'].strftime(DRAW_FILENAME_TEMPLATE),
+                                        DESPIKING_VALUES[value], DRAW_FORMAT),
+                    format=DRAW_FORMAT, dpi=DRAW_DPI)
+            else:
+                plt.show()
 
 
 def get_interpolate(mass, index):
@@ -256,7 +266,7 @@ print("--- %s seconds ---" % (time.time() - start_time))
 structure['Data'] = [i for i in structure['Data'] if len(i['Data']) > 0]
 
 print("Add Temperature Corrected")
-structure["Data"] = [add_t_corrected(x, R) for x in structure["Data"]]
+structure["Data"] = [add_t_corrected(x, PHYS_R) for x in structure["Data"]]
 print("--- %s seconds ---" % (time.time() - start_time))
 
 print("Filter for number of measurement by interval (min 50% for each) ")
