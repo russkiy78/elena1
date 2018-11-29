@@ -265,7 +265,7 @@ print("--- %s seconds ---" % (time.time() - start_time))
 structure['Data'] = [i for i in structure['Data'] if len(i['Data']) > 0]
 
 print("Add Temperature Corrected")
-structure["Data"] = [add_t_corrected(x, PHYS_R) for x in structure["Data"]]
+structure["Data"] = [add_t_corrected(x) for x in structure["Data"]]
 print("--- %s seconds ---" % (time.time() - start_time))
 
 print("Filter for number of measurement by interval (min 50% for each) ")
