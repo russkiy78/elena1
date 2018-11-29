@@ -121,14 +121,14 @@ def get_from_file(filename, file_format, freq, interval, interval_count=0):
 
 
 # ############## SONIC TEMPERATURE HUMIDITY CORRECTION: Kaimal and Gaynor (1991) ###############################
-def add_t_corrected(x, r):
+def add_t_corrected(x):
     for i in range(len(x['Data'])):
 
         tc = numpy.nan
 
         if x['Data'][i]["H2ODensity"] > 0 and x['Data'][i]['AirPressure'] > 0:
             tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
-                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * r * (
+                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * PHYS_R * (
                             x['Data'][i]["SonicTemperature"] + 273.15)) / (18.02 / 1000 * x['Data'][i]['AirPressure']))
         x['Data'][i].update({"CorrectedTemperature": tc})
     return x
@@ -170,11 +170,10 @@ def drawplt(struct):
             plt.plot(ma + float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
             plt.plot(ma - float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
 
-
             plt.title(
                 '{} {} (spikes {})'.format(struct[i]['From'].strftime(DRAW_FILENAME_TEMPLATE),
-                                                         DESPIKING_VALUES[value],
-                                                         struct[i]['Spikes'][DESPIKING_VALUES[value]]))
+                                           DESPIKING_VALUES[value],
+                                           struct[i]['Spikes'][DESPIKING_VALUES[value]]))
             if DRAW_SAVE_TO_FILE:
                 plt.savefig(
                     '{}{}-{}.{}'.format(DRAW_PATH, struct[i]['From'].strftime(DRAW_FILENAME_TEMPLATE),
