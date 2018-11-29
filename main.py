@@ -31,6 +31,23 @@ DESPIKING_MA_PERIOD = 600
 # ###################### EXPERIMENTAL CONSTANTS (FOR DEBUGGING ONLY) ############################
 DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) must be 0 for production
 
+# ###################### DRAWING CONSTANTS  ############################
+DRAW_PATH = '/home/russkiy/elenagraph/'
+DRAW_DPI = 1200
+DRAW_FORMAT = 'png'
+
+DRAW_WIDTH_MAIN = 0.1
+DRAW_COLOR_MAIN = 'black'
+
+DRAW_WIDTH_MEAN = 0.5
+DRAW_COLOR_MEAN = 'green'
+
+DRAW_WIDTH_MA = 0.5
+DRAW_COLOR_MA = 'red'
+
+DRAW_WIDTH_SDMA = 0.5
+DRAW_COLOR_SDMA = 'blue'
+
 
 # ############################# FUNCTIONS DECLARATION ######################################
 # ############################# READ DATA + SPLIT ##################################################
@@ -131,12 +148,7 @@ def diagnostic_filter(struct):
 
 def drawplt(struct):
     for i in range(len(struct)):
-        '''
-        try:
-            os.mkdir('/home/russkiy/elenagraph/despike/{}'.format(struct[i]['From'].strftime("%H-%M-%S")))
-        except FileExistsError:
-            print('mkdir')
-        '''
+
         for value in range(len(DESPIKING_VALUES)):
             print(DESPIKING_VALUES[value])
 
@@ -146,21 +158,18 @@ def drawplt(struct):
 
             ma = moving_average(math_mass, DESPIKING_MA_PERIOD)
             plt.clf()
-            plt.plot(math_mass, color='black')
-            plt.plot(ma, color='blue')
-            plt.plot(ma + float(std * DESPIKING_THRESHOLD[value]), color='grey')
-            plt.plot(ma - float(std * DESPIKING_THRESHOLD[value]), color='grey')
-            plt.plot(numpy.full(len(math_mass), mean), color='green')
+            plt.plot(math_mass, color=DRAW_COLOR_MAIN, linewidth=DRAW_WIDTH_MAIN)
+            plt.plot(ma, color=DRAW_COLOR_MA, linewidth=DRAW_WIDTH_MA)
+            plt.plot(ma + float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
+            plt.plot(ma - float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
+            plt.plot(numpy.full(len(math_mass), mean), color=DRAW_COLOR_MEAN, linewidth=DRAW_WIDTH_MEAN)
 
             plt.title(
                 'Despike {} {} (found spikes {})'.format(struct[i]['From'].strftime("%H-%M-%S"),
                                                          DESPIKING_VALUES[value],
                                                          struct[i]['Spikes'][DESPIKING_VALUES[value]]))
-            # plt.savefig(
-            #    '/home/russkiy/elenagraph/despike/{}/{}-{}-6.png'.format(struct[i]['From'].strftime("%H-%M-%S"),
-            #                                                             DESPIKING_VALUES[value], interval),
-            #    format='png')
-            plt.show()
+            plt.savefig('{}{}.png'.format(DRAW_PATH, DESPIKING_VALUES[value]), format=DRAW_FORMAT, dpi=DRAW_DPI)
+            # plt.show()
 
 
 def get_interpolate(mass, index):
@@ -266,6 +275,7 @@ for i in range(len(structure["Data"])):
                                        structure["Data"][i]['Spikes'][DESPIKING_VALUES[value]]))
 
 drawplt(structure["Data"])
+
 '''
 x=[]
 y=[]
