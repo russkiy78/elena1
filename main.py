@@ -14,10 +14,10 @@ start_time = time.time()
 # FILE = "IRGASON-181012_1229.dat.bz2"  # relative path to file
 FILE = "IRGASON-180201_0000.dat.bz2"
 FORMAT = "07"  # "08"|"07"            # OS EC100 08.01 or EC100 07.01
-FREQUENCY = 10  # the unpromtem output frequency, Hz
+FREQUENCY = 10  # the unpromtem output frequency, Hz 10-20
 INTERVAL = 30  # interval for the flux calculation, min
-Sonic_azimut = 137  # direction of the instruments, degree
-Sonic_height = 2  # height of instrument, m
+SONIC_AZIMUT = 137  # direction of the instruments, degree
+SONIC_HEIGHT = 2  # height of instrument, m
 
 # ###################### PHYSICAL CONSTANTS #################################################
 PHYS_R = 8.3144598 / 1000  # the universal gas constant, !kPa! m3 K-1 mol-1
@@ -54,7 +54,8 @@ DRAW_COLOR_SDMA = 'blue'
 
 # ###################### QUALITY CONTROL CONSTANTS  ############################
 QC_ENABLE = True
-QC_PATH = '/home/russkiy/elenagraph/1/'
+QC_PATH = '/home/russkiy/elenagraph/qc/'
+
 
 # ############################# FUNCTIONS DECLARATION ######################################
 # ############################# READ DATA + SPLIT ##################################################
@@ -264,8 +265,8 @@ def print_qc(struct):
     each_interval = INTERVAL * 60 * FREQUENCY / 100
     ai = len(struct)
     for value in range(len(DESPIKING_VALUES)):
-        with open(QC_PATH+"{}-{}.csv".format(FILE, DESPIKING_VALUES[value]), "w") as f:
-            f.write('interval,AcceptedIntervals,DataPercentInEach,Spike\n')
+        with open(QC_PATH + "{}-{}.csv".format(FILE, DESPIKING_VALUES[value]), "w") as f:
+            f.write('Intervals,Accepted Intervals,Accepted Data In Each Interval (%),Spikes\n')
             for i in range(ai):
                 f.write('{},{},{},{}\n'.format(struct[i]["From"], ai, len(struct[i]["Data"]) / each_interval,
                                                struct[i]['Spikes'][DESPIKING_VALUES[value]]))
@@ -293,8 +294,15 @@ print("Filter for SonicDiagnosticFlag  GasDiagnosticFlag CO2SignalStrengthNomina
 structure["Data"] = diagnostic_filter(structure["Data"])
 print("--- %s seconds ---" % (time.time() - start_time))
 
+print("Despiking")
 structure["Data"] = despiking(structure["Data"])
 print("--- %s seconds ---" % (time.time() - start_time))
+
+if DRAW_ENABLE:
+    drawplt(structure["Data"])
+
+if QC_ENABLE:
+    print_qc(structure["Data"])
 
 '''
 for i in range(len(structure["Data"])):
@@ -304,11 +312,6 @@ for i in range(len(structure["Data"])):
                                        DESPIKING_VALUES[value],
                                        structure["Data"][i]['Spikes'][DESPIKING_VALUES[value]]))
 '''
-
-if DRAW_ENABLE:
-    drawplt(structure["Data"])
-
-print_qc(structure["Data"])
 
 '''
 x=[]
