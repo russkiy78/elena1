@@ -30,13 +30,14 @@ DESPIKING_MAX_IN_ROW = 10  # maximum spikes in a row that are counted as spikes
 DESPIKING_MA_PERIOD = 60  #
 
 # ###################### !!!DEBUG CONSTANTS (FOR DEBUGGING ONLY)!!! ############################
-DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) MUST BE 0 FOR PRODUCTION
+DEBUG_MAX_INTERVALS = 0  # the number of intervals (received from the file) MUST BE 0 FOR PRODUCTION
 
 # ###################### DRAWING CONSTANTS  ############################
+DRAW_ENABLE = False
 DRAW_PATH = '/home/russkiy/elenagraph/'
 DRAW_DPI = 400
 DRAW_FORMAT = 'png'
-DRAW_SAVE_TO_FILE = True  # save graphic to dist instead of show
+DRAW_SAVE_TO_FILE = False  # save graphic to dist instead of show
 DRAW_FILENAME_TEMPLATE = "%Y-%m-%d %H:%M:%S"
 
 # DRAW_WIDTH_MAIN = 0.5
@@ -51,6 +52,9 @@ DRAW_COLOR_MA = 'red'
 DRAW_WIDTH_SDMA = 0.2
 DRAW_COLOR_SDMA = 'blue'
 
+# ###################### QUALITY CONTROL CONSTANTS  ############################
+QC_ENABLE = True
+QC_PATH = '/home/russkiy/elenagraph/1/'
 
 # ############################# FUNCTIONS DECLARATION ######################################
 # ############################# READ DATA + SPLIT ##################################################
@@ -143,6 +147,7 @@ def filter_struct(struct, interval, freq, threshold=0.5):
 # ########################## FILTERING: BY DAGNOSTIC FLAGS ####################################################
 def diagnostic_filter(struct):
     for index in range(len(struct)):
+        struct[index]['BeforeFilter'] = len(struct[index]["Data"])
         struct[index]["Data"] = [x for x in struct[index]["Data"]
                                  if x['SonicDiagnosticFlag'] == 0
                                  and x['GasDiagnosticFlag'] == 0
@@ -165,7 +170,7 @@ def drawplt(struct):
             ma = moving_average(math_mass, DESPIKING_MA_PERIOD)
             plt.clf()
             plt.plot(numpy.full(len(math_mass), mean), color=DRAW_COLOR_MEAN, linewidth=DRAW_WIDTH_MEAN)
-            plt.plot(math_mass, ',', color=DRAW_COLOR_MAIN)
+            plt.plot(math_mass, 'o', color=DRAW_COLOR_MAIN, markersize=0.7)
             plt.plot(ma, color=DRAW_COLOR_MA, linewidth=DRAW_WIDTH_MA)
             plt.plot(ma + float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
             plt.plot(ma - float(std * DESPIKING_THRESHOLD[value]), color=DRAW_COLOR_SDMA, linewidth=DRAW_WIDTH_SDMA)
@@ -199,7 +204,7 @@ def despiking(struct):
 
         for value in range(len(DESPIKING_VALUES)):
 
-            print(DESPIKING_VALUES[value])
+            # print(DESPIKING_VALUES[value])
 
             struct[i]['Spikes'][DESPIKING_VALUES[value]] = 0
             math_mass = numpy.array([x[DESPIKING_VALUES[value]] for x in struct[i]['Data']])
@@ -254,6 +259,18 @@ def moving_average(y, n):
     return numpy.convolve(y_padded, numpy.ones((n,)) / n, mode='valid')
 
 
+def print_qc(struct):
+    # intervals = 1440 / INTERVAL
+    each_interval = INTERVAL * 60 * FREQUENCY / 100
+    ai = len(struct)
+    for value in range(len(DESPIKING_VALUES)):
+        with open(QC_PATH+"{}-{}.csv".format(FILE, DESPIKING_VALUES[value]), "w") as f:
+            f.write('interval,AcceptedIntervals,DataPercentInEach,Spike\n')
+            for i in range(ai):
+                f.write('{},{},{},{}\n'.format(struct[i]["From"], ai, len(struct[i]["Data"]) / each_interval,
+                                               struct[i]['Spikes'][DESPIKING_VALUES[value]]))
+
+
 # ######################## MAIN CODE ############################################################################
 
 print("Get from file...")
@@ -279,13 +296,19 @@ print("--- %s seconds ---" % (time.time() - start_time))
 structure["Data"] = despiking(structure["Data"])
 print("--- %s seconds ---" % (time.time() - start_time))
 
+'''
 for i in range(len(structure["Data"])):
+    print('rawlen = {} filerlen = {}'.format(structure["Data"][i]['BeforeFilter'], len(structure["Data"][i]['Data'])))
     for value in range(len(DESPIKING_VALUES)):
         print('{} {} spikes {}'.format(structure["Data"][i]["From"],
                                        DESPIKING_VALUES[value],
                                        structure["Data"][i]['Spikes'][DESPIKING_VALUES[value]]))
+'''
 
-drawplt(structure["Data"])
+if DRAW_ENABLE:
+    drawplt(structure["Data"])
+
+print_qc(structure["Data"])
 
 '''
 x=[]
