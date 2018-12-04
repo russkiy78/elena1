@@ -44,7 +44,7 @@ XCO2 = 44.0095                    # g mol-1
 
 # ##################### EMPIRICAL CONSTANTS #########################################
 Lk = 2.0           # acc. Klunj, 2004: L'~2.0 (figure A1)
-bK = 3.7          # acc. Klunj, 2004
+bK = 3.7           # acc. Klunj, 2004
 Ac = 4.28
 Ad = 1.68
 Bk = 3.42
@@ -156,11 +156,10 @@ def add_t_corrected(x):
 
         if x['Data'][i]["H2ODensity"] > 0 and x['Data'][i]['AirPressure'] > 0:
             tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
-                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * PHYS_R * (
-                            x['Data'][i]["SonicTemperature"] + 273.15)) / (18.02 / 1000 * x['Data'][i]['AirPressure']))
+                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * PHYS_R * (   ###!!! here H2ODensity in g mol-1
+                            x['Data'][i]["SonicTemperature"] + 273.15)) / (PHYS_W * x['Data'][i]['AirPressure'])) ###!!! Air pressure in kPa
         x['Data'][i].update({"CorrectedTemperature": tc})
     return x
-
 
 # ################################ FILTERING: BY A NUMBER OF MEASUREMENTS #####################################
 def filter_struct(struct, interval, freq, threshold=0.5):
@@ -281,6 +280,20 @@ def moving_average(y, n):
     y_padded = numpy.pad(y, (n // 2, n - 1 - n // 2), mode='edge')
     return numpy.convolve(y_padded, numpy.ones((n,)) / n, mode='valid')
 
+# ####################### to calculate the density of dry air, kg m-3 ##########################################
+!!! see eq. 2
+
+# ####################### to calculate the air density, kg m-3 ##################################################
+!!! see eq. 3
+
+# ####################### to calculate the Sigma ratio according to Webb, 1980 ##################################
+!!! see eq. 4
+
+# ####################### to calculate the latent heat of vaporization, J kg-1 according to Stull, 1989 #########
+!!! see eq. 5
+
+# ####################### to calculate the specific heat of air, J kg-1 K-1 according to Stull, 1989 ############
+!!! see eq. 6
 
 # ######################## MAIN CODE ############################################################################
 
