@@ -1,5 +1,17 @@
 #!/usr/bin/python 
+#  Software description: POST PROCESSING OF THE RAW DATASET: IRGASON (OS VERSION EC100.07.01), OUTPUT VIA RS485 PORT  
+#  Experiment: ANTARCTICA, 2018
+#  Current version: 0.01
+# Contact: elena.shevnina@fmi.fi 
 
+################### GENERAL COMMENTS ########################################################################
+#Output data from the Irgason are collected  and stored in the "in-house" developed datalogger 
+#the data loger is based on MOXA computer (https://www.moxa.com/product/IA260.htm). 
+#It has a light version of linux as well as shell scripts combining the outputs from GPS and EC100, and run the data saving process.
+#the final data is packed on bz2 file once a day.
+
+
+##################### Libraries  ######################################################
 import os
 import bz2
 import math
@@ -7,7 +19,6 @@ import matplotlib.pyplot as plt
 import numpy
 from datetime import datetime, timedelta
 import time
-
 start_time = time.time()
 
 # ###########################CONFIGURATION OF THE EXPERIMENT#################################
@@ -20,7 +31,24 @@ Sonic_azimut = 137  # direction of the instruments, degree
 Sonic_height = 2  # height of instrument, m
 
 # ###################### PHYSICAL CONSTANTS #################################################
-PHYS_R = 8.3144598 / 1000  # the universal gas constant, !kPa! m3 K-1 mol-1
+PHYS_R = 8.3144598                # the universal gas constant, Pa m3 K-1 mol-1             //Pa =  kg⋅m−1⋅s−2
+PHYS_DA = 287.058                 # the specific gas constant for dry air, Pa m3 K-1 kg-1   
+PHYS_WV = 461.5                   # the specific gas constant for water vapor, Pa m3 K-1 Kg-1 
+PHYS_HDA = 1004.67                # the specific heat of dry air at a constant pressure, J kg-1 K-1 // J =  kg⋅m2⋅s−2
+PHYS_LHV = 2501000                #the latent heat of vaporization at 0ºC, J kg-1 
+PHYS_W = 0.018016                 # the molar mass of water vapor, kg mol-1
+PHYS_A = 0.02897                  # the molar mass of dry air, kg mol-1
+PHYS_G = 9.80665                  # the gravity accelation, m s-2
+
+XCO2 = 44.0095                    # g mol-1
+
+# ##################### EMPIRICAL CONSTANTS #########################################
+Lk = 2.0           # acc. Klunj, 2004: L'~2.0 (figure A1)
+bK = 3.7          # acc. Klunj, 2004
+Ac = 4.28
+Ad = 1.68
+Bk = 3.42
+alpha1 = -0.8 
 
 # ###################### DESPIKING PARAMETERS #################################################
 DESPIKING_VALUES = ['Ux', 'Uy', 'Uz', 'SonicTemperature', 'CorrectedTemperature', 'CO2Density', 'H2ODensity']
@@ -97,24 +125,24 @@ def get_from_file(filename, file_format, freq, interval, interval_count=0):
 
                     struct["Data"][index[-1]]["Data"].append({
                         'DateStamp': dt,
-                        'Ux': float(firstfline[2]) if firstfline[2] else numpy.nan,  # ms-1
-                        'Uy': float(line[1]) if line[1] else numpy.nan,  # ms-1
-                        'Uz': float(line[2]) if line[2] else numpy.nan,  # ms-1
-                        'SonicTemperature': float(line[3]) if line[3] else numpy.nan,  # C
-                        'SonicDiagnosticFlag': float(line[4]) if line[4] else numpy.nan,  #
-                        'CO2Density': float(line[5]) if line[5] else numpy.nan,  # mg m-3
-                        'H2ODensity': float(line[6]) if line[6] else numpy.nan,  # g m-3
-                        'GasDiagnosticFlag': float(line[7]) if line[7] else numpy.nan,  #
-                        'AirTemperature': float(line[8]) if line[8] else numpy.nan,  # C
-                        'AirPressure': float(line[9]) if line[9] else numpy.nan,  # kPa
-                        'CO2SignalStrengthNominally': float(line[10]) if line[10] else numpy.nan,  #
-                        'H2OSignalStrengthNominally': float(line[11]) if line[11] else numpy.nan,  #
-                        'PressureDifferential': float(line[12]) if line[12] else numpy.nan,  # kPa
-                        'CO2Correct': float(line[12]) if line[12] else numpy.nan,  # mg m-3
-                        'SourceHousingTemperature': float(line[13]) if line[13] else numpy.nan,  # C not needed
-                        'DetectorHousingTemperature': float(line[14]) if line[14] else numpy.nan,  # C not needed
-                        'CounterArbitrary': int(line[15]) if line[15] else numpy.nan,  # not needed
-                        'SignatureArbitrary': line[16] if line[16] else ''  # not needed
+                        'Ux': float(firstfline[2]) if firstfline[2] else numpy.nan,                     # wind x-component, m s-1
+                        'Uy': float(line[1]) if line[1] else numpy.nan,                                 # wind y-component, m s-1
+                        'Uz': float(line[2]) if line[2] else numpy.nan,                                 # wind z-component, m s-1
+                        'SonicTemperature': float(line[3]) if line[3] else numpy.nan,                   # degree Celcium
+                        'SonicDiagnosticFlag': float(line[4]) if line[4] else numpy.nan,                # flag, non unit
+                        'CO2Density': float(line[5]) if line[5] else numpy.nan,                         # density, !!!mg m-3  
+                        'H2ODensity': float(line[6]) if line[6] else numpy.nan,                         # density, g m-3
+                        'GasDiagnosticFlag': float(line[7]) if line[7] else numpy.nan,                  # flag, non unit
+                        'AirTemperature': float(line[8]) if line[8] else numpy.nan,                     # degree Celcium
+                        'AirPressure': float(line[9]) if line[9] else numpy.nan,                        # pressure, !!!kPa
+                        'CO2SignalStrengthNominally': float(line[10]) if line[10] else numpy.nan,       # fraction
+                        'H2OSignalStrengthNominally': float(line[11]) if line[11] else numpy.nan,       # fraction
+                        'PressureDifferential': float(line[12]) if line[12] else numpy.nan,             # pressure, !!!kPa
+                        'CO2Correct': float(line[12]) if line[12] else numpy.nan,                       # density, !!!mg m-3
+                        'SourceHousingTemperature': float(line[13]) if line[13] else numpy.nan,         # degree Celcium, not used
+                        'DetectorHousingTemperature': float(line[14]) if line[14] else numpy.nan,       # degree Celcium, not used
+                        'CounterArbitrary': int(line[15]) if line[15] else numpy.nan,                   # not used
+                        'SignatureArbitrary': line[16] if line[16] else ''                              # not used
                     })
 
         return struct
