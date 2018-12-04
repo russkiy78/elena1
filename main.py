@@ -22,9 +22,10 @@ import time
 start_time = time.time()
 
 # ###########################CONFIGURATION OF THE EXPERIMENT#################################
-# FILE = "IRGASON-181012_1229.dat.bz2"  # relative path to file
+# FILE = "IRGASON-181012_1229.dat.bz2"     # relative path to file
 FILE = "IRGASON-180201_0000.dat.bz2"
-FORMAT = "07"  # "08"|"07"            # OS EC100 08.01 or EC100 07.01
+DRAW_PATH = '/home/russkiy/elenagraph/'    # relative path to the directory with graphs
+FORMAT = "07"  # "08"|"07"                 # OS EC100 08.01 or EC100 07.01
 FREQUENCY = 10  # the unpromtem output frequency, Hz
 INTERVAL = 30  # interval for the flux calculation, min
 Sonic_azimut = 137  # direction of the instruments, degree
@@ -54,14 +55,13 @@ alpha1 = -0.8
 DESPIKING_VALUES = ['Ux', 'Uy', 'Uz', 'SonicTemperature', 'CorrectedTemperature', 'CO2Density', 'H2ODensity']
 DESPIKING_THRESHOLD = [3.5, 3.5, 5, 3.5, 3.5, 3.5, 3.5]
 DESPIKING_MAXCIRCLES = 20
-DESPIKING_MAX_IN_ROW = 10  # maximum spikes in a row that are counted as spikes
-DESPIKING_MA_PERIOD = 60  #
+DESPIKING_MAX_IN_ROW = 10  # maximum spikes in a row that are counted as spikes, should be 3 according to Vickers and Mahrt, 1997
+DESPIKING_MA_PERIOD = 60   # moving window length, calculated as FREQUENCY, Hz * time_period, sec (10 Hz *6 sec)
 
 # ###################### !!!DEBUG CONSTANTS (FOR DEBUGGING ONLY)!!! ############################
 DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) MUST BE 0 FOR PRODUCTION
 
 # ###################### DRAWING CONSTANTS  ############################
-DRAW_PATH = '/home/russkiy/elenagraph/'
 DRAW_DPI = 400
 DRAW_FORMAT = 'png'
 DRAW_SAVE_TO_FILE = True  # save graphic to dist instead of show
