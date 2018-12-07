@@ -155,10 +155,16 @@ def add_t_corrected(x):
         tc = numpy.nan
 
         if x['Data'][i]["H2ODensity"] > 0 and x['Data'][i]['AirPressure'] > 0:
-            tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
-                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * PHYS_R * (   ###!!! here H2ODensity in g mol-1
-                            x['Data'][i]["SonicTemperature"] + 273.15)) / (PHYS_W * x['Data'][i]['AirPressure'])) ###!!! Air pressure in kPa
+#           tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
+#                    (1 + 0.32 * x['Data'][i]['H2ODensity'] / 1000 * PHYS_R * (   ###!!! here H2ODensity in g mol-1
+#                            x['Data'][i]["SonicTemperature"] + 273.15)) / (PHYS_W * x['Data'][i]['AirPressure'])) ###!!! Air pressure in kPa
         x['Data'][i].update({"CorrectedTemperature": tc})
+        
+# suggestion by M. Potes, 05.12.2018        
+        tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
+                 (1 + 0.32 * x['Data'][i]['H2ODensity'] * (PHYS_R/1000)  * ( ###!!! here H2ODensity in g m-3
+                         x['Data'][i]["SonicTemperature"] + 273.15)) / ((PHYS_W *1000) * x['Data'][i]['AirPressure'])) ###!!! Air pressure in kPa
+       x['Data'][i].update({"CorrectedTemperature": tc}) 
     return x
 
 # ################################ FILTERING: BY A NUMBER OF MEASUREMENTS #####################################
