@@ -65,7 +65,7 @@ DEBUG_MAX_INTERVALS = 2  # the number of intervals (received from the file) MUST
 # ###################### DRAWING CONSTANTS  ############################
 DRAW_DPI = 400
 DRAW_FORMAT = 'png'
-DRAW_SAVE_TO_FILE = True  # save graphic to dist instead of show
+DRAW_SAVE_TO_FILE = False  # save graphic to dist instead of show
 DRAW_FILENAME_TEMPLATE = "%Y-%m-%d %H:%M:%S"
 
 # DRAW_WIDTH_MAIN = 0.5
@@ -167,7 +167,7 @@ def add_t_corrected(x):
             # !!! here H2ODensity in g m-3
             # !!! Air pressure in kPa
 
-    x['Data'][i].update({"CorrectedTemperature": tc})
+        x['Data'][i].update({"CorrectedTemperature": tc})
     return x
 
 
