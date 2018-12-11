@@ -29,8 +29,8 @@ DRAW_PATH = '/home/russkiy/elenagraph/'  # relative path to the directory with g
 FORMAT = "07"  # "08"|"07"                 # OS EC100 08.01 or EC100 07.01
 FREQUENCY = 10  # the unpromtem output frequency, Hz
 INTERVAL = 30  # interval for the flux calculation, min
-Sonic_azimut = 137  # direction of the instruments, degree
-Sonic_height = 2  # height of instrument, m
+SONIC_AZIMUT = 137  # direction of the instruments, degree
+SONIC_HEIGHT = 2  # height of instrument, m
 
 # ###################### PHYSICAL CONSTANTS #################################################
 PHYS_R = 8.3144598  # the universal gas constant, Pa m3 K-1 mol-1             //Pa =  kg⋅m−1⋅s−2
@@ -141,9 +141,9 @@ def get_from_file(filename, file_format, freq, interval, interval_count=0):
                         'PressureDifferential': float(line[12]) if line[12] else numpy.nan,  # pressure, !!!kPa
                         'CO2Correct': float(line[12]) if line[12] else numpy.nan,  # density, !!!mg m-3
                         'SourceHousingTemperature': float(line[13]) if line[13] else numpy.nan,
-                    # degree Celcium, not used
+                        # degree Celcium, not used
                         'DetectorHousingTemperature': float(line[14]) if line[14] else numpy.nan,
-                    # degree Celcium, not used
+                        # degree Celcium, not used
                         'CounterArbitrary': int(line[15]) if line[15] else numpy.nan,  # not used
                         'SignatureArbitrary': line[16] if line[16] else ''  # not used
                     })
@@ -158,12 +158,11 @@ def add_t_corrected(x):
         tc = numpy.nan
 
         if x['Data'][i]["H2ODensity"] > 0 and x['Data'][i]['AirPressure'] > 0:
-
             # suggestion by M. Potes, 05.12.2018
             tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
                     (1 + 0.32 * x['Data'][i]['H2ODensity'] * (PHYS_R / 1000) * (
                             x['Data'][i]["SonicTemperature"] + 273.15)) / (
-                                (PHYS_W * 1000) * x['Data'][i]['AirPressure']))
+                            (PHYS_W * 1000) * x['Data'][i]['AirPressure']))
             # !!! here H2ODensity in g m-3
             # !!! Air pressure in kPa
 
