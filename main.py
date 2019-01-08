@@ -158,11 +158,12 @@ def add_t_corrected(x):
         tc = numpy.nan
 
         if x['Data'][i]["H2ODensity"] > 0 and x['Data'][i]['AirPressure'] > 0:
-            # suggestion by M. Potes, 05.12.2018
-            tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
-                    (1 + 0.32 * x['Data'][i]['H2ODensity'] * (PHYS_R / 1000) * (
-                            x['Data'][i]["SonicTemperature"] + 273.15)) / (
-                            (PHYS_W * 1000) * x['Data'][i]['AirPressure']))
+            # suggestion by M. Potes, 08.01.2019
+           tc = (x['Data'][i]["SonicTemperature"] + 273.15) / (
+                    (1 + 0.32 * (x['Data'][i]['H2ODensity'] * (PHYS_R / 1000) *
+                            x['Data'][i]["SonicTemperature"] + 273.15) /
+                                ((PHYS_W * 1000) * x['Data'][i]['AirPressure'])))
+
             # !!! here H2ODensity in g m-3
             # !!! Air pressure in kPa
 
